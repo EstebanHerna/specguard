@@ -1,0 +1,14 @@
+{
+  "enabled": true,
+  "name": "Audit spec on tasks.md save",
+  "description": "Cada vez que se guarda un tasks.md de un spec, corre SpecGuard para detectar tareas fantasma antes de que lleguen a un PR",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [".kiro/specs/**/tasks.md"]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Run 'specguard audit --spec .kiro/specs/specguard-core --diff HEAD' and summarize any phantom_task or uncovered_requirement findings. If there are none, say the spec and code are in sync."
+  }
+}

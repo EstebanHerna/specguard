@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SpecGuard - Matriz de trazabilidad</title>
+<style>
+  :root {
+    --bg: #0d1117; --panel: #161b22; --border: #30363d; --text: #e6edf3;
+    --muted: #8b949e; --green: #3fb950; --red: #f85149; --yellow: #d29922;
+    --accent: #a371f7;
+  }
+  * { box-sizing: border-box; margin: 0; }
+  body { background: var(--bg); color: var(--text); font-family: ui-monospace, "Cascadia Code", Consolas, monospace; padding: 2rem; }
+  header { display: flex; align-items: baseline; gap: 1rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
+  h1 { font-size: 1.4rem; }
+  h1 span { color: var(--accent); }
+  .meta { color: var(--muted); font-size: .85rem; }
+  .score { font-size: 2.4rem; font-weight: bold; }
+  .score.good { color: var(--green); } .score.mid { color: var(--yellow); } .score.bad { color: var(--red); }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; align-items: start; }
+  @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
+  .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 1.2rem; }
+  .panel h2 { font-size: 1rem; margin-bottom: .8rem; color: var(--accent); }
+  table { width: 100%; border-collapse: collapse; font-size: .82rem; }
+  th, td { border: 1px solid var(--border); padding: .45rem .6rem; text-align: left; vertical-align: top; }
+  th { color: var(--muted); font-weight: normal; }
+  .files { color: var(--muted); }
+  .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: .5rem; }
+  .covered { background: var(--green); } .uncovered_requirement { background: var(--red); }
+  .phantom_task { background: var(--red); } .orphan_code { background: var(--yellow); }
+  .untested_criterion { background: var(--yellow); }
+  .finding { padding: .5rem 0; border-bottom: 1px solid var(--border); font-size: .82rem; }
+  .finding:last-child { border-bottom: none; }
+  .finding .v { text-transform: uppercase; font-size: .7rem; letter-spacing: .05em; }
+  .finding .d { color: var(--muted); margin-top: .2rem; }
+  .empty { color: var(--muted); padding: 2rem; text-align: center; }
+  footer { margin-top: 2rem; color: var(--muted); font-size: .75rem; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Spec<span>Guard</span></h1>
+  <div class="meta" id="meta">cargando reporte...</div>
+  <div style="flex:1"></div>
+  <div class="score" id="score">--</div>
+</header>
+<div class="grid">
+  <div class="panel">
+    <h2>Matriz de trazabilidad</h2>
+    <table id="matrix"><thead><tr><th></th><th>Requisito</th><th>Implementado en</th></tr></thead><tbody></tbody></table>
+  </div>
+  <div class="panel">
+    <h2>Hallazgos</h2>
+    <div id="findings"></div>
+  </div>
+</div>
+<footer>SpecGuard audita si tu codigo realmente implementa tu spec de Kiro. Genera este reporte con: specguard audit --spec .kiro/specs/&lt;feature&gt; -o dashboard</footer>
+<script>
+const LABELS = {
+  covered: "cubierto",
+  uncovered_requirement: "sin implementar",
+  phantom_task: "tarea fantasma",
+  orphan_code: "codigo huerfano",
+  untested_criterion: "sin test"
+};
+const COLORS = { covered: "var(--green)", uncovered_requirement: "var(--red)", phantom_task: "var(--red)", orphan_code: "var(--yellow)", untested_criterion: "var(--yellow)" };
+
+async function load() {
+  let data;
+  try {
+    const res = await fetch("report.json");
+    data = await res.json();
+  } catch (e) {
+    document.getElementById("meta").textContent = "No se encontro report.json junto al dashboard.";
+    return;
+  }
+  document.getElementById("meta").textContent = `spec: ${data.spec_name} | diff: ${data.diff_ref} | semantico: ${data.semantic_used ? "si" : "no"}`;
+  const scoreEl = document.getElementById("score");
+  scoreEl.textContent = data.score + "%";
+  scoreEl.className = "score " + (data.score >= 80 ? "good" : data.score >= 50 ? "mid" : "bad");
+
+  const tbody = document.querySelector("#matrix tbody");
+  for (const req of data.requirements) {
+    const files = data.coverage[req.id] || [];
+    const cls = files.length ? "covered" : "uncovered_requirement";
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td><span class="dot ${cls}"></span></td>` +
+      `<td><b>${req.id}</b> ${req.title}</td>` +
+      `<td class="files">${files.length ? files.join("<br>") : "(ninguno)"}</td>`;
+    tbody.appendChild(tr);
+  }
+
+  const cont = document.getElementById("findings");
+  const order = ["uncovered_requirement", "phantom_task", "orphan_code", "untested_criterion", "covered"];
+  const sorted = [...data.findings].sort((a, b) => order.indexOf(a.verdict) - order.indexOf(b.verdict));
+  if (!sorted.length) cont.innerHTML = '<div class="empty">Sin hallazgos</div>';
+  for (const f of sorted) {
+    const div = document.createElement("div");
+    div.className = "finding";
+    div.innerHTML = `<span class="v" style="color:${COLORS[f.verdict]}">` +
+      `<span class="dot ${f.verdict}"></span>${LABELS[f.verdict] || f.verdict}</span> ` +
+      `<b>${f.subject_id}</b><div class="d">${f.detail}</div>`;
+    cont.appendChild(div);
+  }
+}
+load();
+</script>
+</body>
+</html>

@@ -1,0 +1,32 @@
+name: "SpecGuard Audit"
+description: "Audita la trazabilidad entre specs de Kiro y el codigo de un pull request"
+branding:
+  icon: "shield"
+  color: "purple"
+inputs:
+  spec-dir:
+    description: "Directorio del spec de Kiro"
+    required: true
+  base-ref:
+    description: "Rama base contra la que comparar"
+    required: false
+    default: "origin/main"
+  fail-under:
+    description: "Score minimo de trazabilidad para pasar"
+    required: false
+    default: "0"
+runs:
+  using: "composite"
+  steps:
+    - name: Install SpecGuard
+      shell: bash
+      run: pip install ${{ github.action_path }}
+    - name: Run audit
+      shell: bash
+      run: |
+        git fetch origin ${GITHUB_BASE_REF:-main} --depth=50 || true
+        specguard audit \
+          --spec "${{ inputs.spec-dir }}" \
+          --diff "${{ inputs.base-ref }}...HEAD" \
+          --output reports \
+          --fail-under "${{ inputs.fail-under }}"
