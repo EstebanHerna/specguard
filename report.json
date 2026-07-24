@@ -1,0 +1,1920 @@
+{
+  "spec_name": "specguard-core",
+  "diff_ref": "main...feat/task8-parser-hardening",
+  "requirements": [
+    {
+      "id": "1",
+      "title": "Parser de specs de Kiro",
+      "user_story": "As a developer, I want SpecGuard to parse real-world Kiro spec variations, so that requirements, acceptance criteria, user stories, and tasks become structured data without breaking existing integrations.",
+      "criteria": [
+        {
+          "id": "1.1",
+          "text": "WHEN a `requirements.md` heading at level `##`, `###`, or `####` starts with English `Requirement N` or Spanish `Requisito N`, with or without a colon after the numeric identifier `N`, THE Kiro_Spec_Parser SHALL extract `N`, trim surrounding whitespace from a title when a title is present, and associate the Requirement_Body with the parsed Requirement."
+        },
+        {
+          "id": "1.2",
+          "text": "WHEN a `requirements.md` file contains multiple recognized requirement headings, THE Kiro_Spec_Parser SHALL return the parsed Requirement objects in document order and delimit each Requirement_Body at the next recognized requirement heading or the end of the document."
+        },
+        {
+          "id": "1.3",
+          "text": "WHEN an Acceptance_Criteria_Section contains entries marked by a numeric identifier followed by `.` or `)`, `-`, or `*`, THE Kiro_Spec_Parser SHALL extract the trimmed Acceptance_Criterion text in document order."
+        },
+        {
+          "id": "1.4",
+          "text": "WHEN a Requirement_Body contains the bold label `**User Story:**` or `**Historia de Usuario:**`, THE Kiro_Spec_Parser SHALL extract the trimmed text following the label as the user story."
+        },
+        {
+          "id": "1.5",
+          "text": "IF a Requirement_Body has no Acceptance_Criteria_Section or the Acceptance_Criteria_Section has no list entries, THEN THE Kiro_Spec_Parser SHALL return the Requirement with an empty acceptance-criteria collection and continue parsing subsequent recognized requirements."
+        },
+        {
+          "id": "1.6",
+          "text": "WHEN a `tasks.md` file contains a task with a Checkbox_State and a Task_ID of arbitrary segment depth, THE Kiro_Spec_Parser SHALL extract the complete Task_ID, map a space to incomplete, map `x` or `X` to complete, and return parsed SpecTask objects in document order."
+        },
+        {
+          "id": "1.7",
+          "text": "THE Kiro_Spec_Parser SHALL preserve `parse_requirements(path: Path) -> list[Requirement]` as a Public_API signature."
+        },
+        {
+          "id": "1.8",
+          "text": "THE Kiro_Spec_Parser SHALL preserve `parse_tasks(path: Path) -> list[SpecTask]` as a Public_API signature."
+        },
+        {
+          "id": "1.9",
+          "text": "THE Kiro_Spec_Parser SHALL preserve `load_spec(spec_dir: Path) -> tuple[list[Requirement], list[SpecTask]]` as a Public_API signature."
+        }
+      ]
+    },
+    {
+      "id": "2",
+      "title": "Parser de diffs de git",
+      "user_story": "As a developer, I want SpecGuard to parse a git diff, so that changed files, hunks and defined symbols are available for matching.",
+      "criteria": [
+        {
+          "id": "2.1",
+          "text": "WHEN a git reference is provided, THE Git_Diff_Parser SHALL obtain the unified diff through the git CLI."
+        },
+        {
+          "id": "2.2",
+          "text": "WHEN a unified diff contains an added line that defines a function or class in Python, JavaScript, or TypeScript, THE Git_Diff_Parser SHALL extract the defined symbol name."
+        },
+        {
+          "id": "2.3",
+          "text": "WHEN a unified diff identifies a file as new or deleted, THE Git_Diff_Parser SHALL record the corresponding file status."
+        }
+      ]
+    },
+    {
+      "id": "3",
+      "title": "Motor de trazabilidad heuristico",
+      "user_story": "As a developer, I want a deterministic matching engine, so that I get useful audit results without any LLM dependency.",
+      "criteria": [
+        {
+          "id": "3.1",
+          "text": "WHEN parsed requirements and changed files are available, THE Traceability_Engine SHALL compute a coverage map from each requirement identifier to matching changed-file paths."
+        },
+        {
+          "id": "3.2",
+          "text": "WHEN a parsed requirement has no matching changed file, THE Traceability_Engine SHALL emit an `uncovered_requirement` Finding for the requirement identifier."
+        },
+        {
+          "id": "3.3",
+          "text": "WHEN a parsed task is marked complete and has no related changed file, THE Traceability_Engine SHALL emit a `phantom_task` Finding for the Task_ID."
+        },
+        {
+          "id": "3.4",
+          "text": "WHEN a changed file matches no parsed requirement, THE Traceability_Engine SHALL emit an `orphan_code` Finding for the changed-file path."
+        },
+        {
+          "id": "3.5",
+          "text": "WHEN a covered requirement has no associated changed test file, THE Traceability_Engine SHALL emit an `untested_criterion` Finding for the requirement identifier."
+        },
+        {
+          "id": "3.6",
+          "text": "WHEN a heuristic audit completes, THE Traceability_Engine SHALL compute the Traceability_Score."
+        }
+      ]
+    },
+    {
+      "id": "4",
+      "title": "Refinamiento semantico con Bedrock",
+      "user_story": "As a developer, I want an optional LLM pass over the preliminary findings, so that semantic matches missed by heuristics are detected.",
+      "criteria": [
+        {
+          "id": "4.1",
+          "text": "WHERE semantic refinement is enabled, WHEN a Heuristic_Result is available, THE Semantic_Refiner SHALL send the parsed requirements, parsed tasks, truncated unified diff, and Heuristic_Result to Amazon Bedrock."
+        },
+        {
+          "id": "4.2",
+          "text": "WHEN Amazon Bedrock returns a valid JSON array of findings, THE Semantic_Refiner SHALL replace the findings in the Heuristic_Result with the returned findings."
+        },
+        {
+          "id": "4.3",
+          "text": "IF the Amazon Bedrock call or response processing fails, THEN THE Semantic_Refiner SHALL return the Heuristic_Result and allow report generation to complete."
+        }
+      ]
+    },
+    {
+      "id": "5",
+      "title": "Reportes y CLI",
+      "user_story": "As a developer, I want reports in multiple formats, so that I can consume the audit from terminal, CI and a dashboard.",
+      "criteria": [
+        {
+          "id": "5.1",
+          "text": "WHEN an audit completes, THE Reporting_System SHALL write `report.json` and `report.md` to the configured output directory."
+        },
+        {
+          "id": "5.2",
+          "text": "WHEN an audit runs in a terminal, THE SpecGuard_CLI SHALL print a color-coded findings table and the Traceability_Score."
+        },
+        {
+          "id": "5.3",
+          "text": "WHERE `--fail-under` is provided, WHEN the Traceability_Score is below the provided threshold, THE SpecGuard_CLI SHALL exit with code `1`."
+        }
+      ]
+    },
+    {
+      "id": "6",
+      "title": "Integracion con GitHub Actions",
+      "user_story": "As a team, I want SpecGuard to run on every pull request, so that traceability is enforced automatically.",
+      "criteria": [
+        {
+          "id": "6.1",
+          "text": "WHEN a pull request is opened or updated, THE GitHub_Actions_Workflow SHALL run a SpecGuard audit against the pull request base branch."
+        },
+        {
+          "id": "6.2",
+          "text": "WHEN a SpecGuard audit produces a Markdown report, THE GitHub_Actions_Workflow SHALL post the Markdown report as a pull-request comment."
+        }
+      ]
+    },
+    {
+      "id": "7",
+      "title": "Dashboard de trazabilidad",
+      "user_story": "As a reviewer, I want a visual traceability matrix, so that I can inspect coverage at a glance.",
+      "criteria": [
+        {
+          "id": "7.1",
+          "text": "WHEN `report.json` is available, THE Dashboard SHALL render the requirement-to-file matrix with a traffic-light color scheme."
+        },
+        {
+          "id": "7.2",
+          "text": "WHEN `report.json` contains findings, THE Dashboard SHALL list the findings grouped by verdict."
+        },
+        {
+          "id": "7.3",
+          "text": "WHERE the Dashboard is deployed as static files, THE Dashboard SHALL load and render the traceability report using static client-side resources."
+        }
+      ]
+    }
+  ],
+  "tasks": [
+    {
+      "id": "1",
+      "text": "Set up project structure and packaging",
+      "done": true,
+      "requirement_refs": [
+        "5.2"
+      ]
+    },
+    {
+      "id": "2",
+      "text": "Implement Kiro spec parser",
+      "done": true,
+      "requirement_refs": []
+    },
+    {
+      "id": "2.1",
+      "text": "Parse requirements.md with EARS criteria and Spanish header support",
+      "done": true,
+      "requirement_refs": [
+        "1.1",
+        "1.2",
+        "1.4"
+      ]
+    },
+    {
+      "id": "2.2",
+      "text": "Parse tasks.md checkboxes with requirement references",
+      "done": true,
+      "requirement_refs": [
+        "1.3"
+      ]
+    },
+    {
+      "id": "3",
+      "text": "Implement git diff parser",
+      "done": true,
+      "requirement_refs": []
+    },
+    {
+      "id": "3.1",
+      "text": "Run git diff via subprocess and parse unified format",
+      "done": true,
+      "requirement_refs": [
+        "2.1",
+        "2.3"
+      ]
+    },
+    {
+      "id": "3.2",
+      "text": "Extract defined symbols from added lines",
+      "done": true,
+      "requirement_refs": [
+        "2.2"
+      ]
+    },
+    {
+      "id": "4",
+      "text": "Implement heuristic traceability engine",
+      "done": true,
+      "requirement_refs": []
+    },
+    {
+      "id": "4.1",
+      "text": "Tokenizer with snake_case and camelCase splitting",
+      "done": true,
+      "requirement_refs": [
+        "3.1"
+      ]
+    },
+    {
+      "id": "4.2",
+      "text": "Coverage map and the five verdict detectors",
+      "done": true,
+      "requirement_refs": [
+        "3.2",
+        "3.3",
+        "3.4",
+        "3.5",
+        "3.6"
+      ]
+    },
+    {
+      "id": "5",
+      "text": "Implement Bedrock semantic refinement with clean fallback",
+      "done": true,
+      "requirement_refs": [
+        "4.1",
+        "4.2",
+        "4.3"
+      ]
+    },
+    {
+      "id": "6",
+      "text": "Implement JSON and Markdown reporters",
+      "done": true,
+      "requirement_refs": [
+        "5.1"
+      ]
+    },
+    {
+      "id": "7",
+      "text": "Implement CLI with audit command and fail-under gate",
+      "done": true,
+      "requirement_refs": [
+        "5.2",
+        "5.3"
+      ]
+    },
+    {
+      "id": "8",
+      "text": "Harden spec parser against real-world Kiro spec variations",
+      "done": true,
+      "requirement_refs": [
+        "1.1",
+        "1.2",
+        "1.3",
+        "1.4",
+        "1.5",
+        "1.6",
+        "1.7",
+        "1.8",
+        "1.9"
+      ]
+    },
+    {
+      "id": "9",
+      "text": "Improve symbol extraction with language-aware parsing",
+      "done": false,
+      "requirement_refs": [
+        "2.2"
+      ]
+    },
+    {
+      "id": "10",
+      "text": "Wire GitHub Action end to end",
+      "done": false,
+      "requirement_refs": []
+    },
+    {
+      "id": "10.1",
+      "text": "Composite action installs specguard and runs audit against base branch",
+      "done": false,
+      "requirement_refs": [
+        "6.1"
+      ]
+    },
+    {
+      "id": "10.2",
+      "text": "Post report.md as sticky PR comment",
+      "done": false,
+      "requirement_refs": [
+        "6.2"
+      ]
+    },
+    {
+      "id": "11",
+      "text": "Build dashboard traceability matrix",
+      "done": false,
+      "requirement_refs": []
+    },
+    {
+      "id": "11.1",
+      "text": "Render requirement/file matrix with traffic-light scheme from report.json",
+      "done": false,
+      "requirement_refs": [
+        "7.1",
+        "7.3"
+      ]
+    },
+    {
+      "id": "11.2",
+      "text": "Findings list grouped by verdict",
+      "done": false,
+      "requirement_refs": [
+        "7.2"
+      ]
+    },
+    {
+      "id": "12",
+      "text": "Deploy dashboard to S3 + CloudFront and engine to Lambda",
+      "done": false,
+      "requirement_refs": [
+        "7.3"
+      ]
+    },
+    {
+      "id": "13",
+      "text": "Integration test: SpecGuard auditing its own repository",
+      "done": true,
+      "requirement_refs": [
+        "3.6",
+        "5.1"
+      ]
+    }
+  ],
+  "changes": [
+    {
+      "path": ".github/workflows/specguard.yml",
+      "status": "modified",
+      "hunks": [
+        {
+          "header": "jobs:",
+          "added": [
+            "            --output reports \\",
+            "            --fail-under 70"
+          ],
+          "removed": [
+            "            --output reports || true"
+          ]
+        }
+      ],
+      "symbols": []
+    },
+    {
+      "path": ".kiro/specs/specguard-core/design.md",
+      "status": "modified",
+      "hunks": [
+        {
+          "header": "SpecGuard es un pipeline de cuatro etapas: parseo de specs, parseo de diff,",
+          "added": [
+            "El endurecimiento de la tarea 8 se limita a `parsers/kiro_spec.py` y sus pruebas.",
+            "La inspeccion del parser y de los fixtures actuales muestra que conviene conservar",
+            "el parseo lineal con regex, pero separar reconocimiento, limites y extraccion en",
+            "estados explicitos. No se agregan dependencias al nucleo y se mantiene Python 3.10+.",
+            "",
+            "## Architecture",
+            "",
+            "La arquitectura y el flujo de datos no cambian. `kiro_spec.py` sigue siendo un",
+            "adaptador sin estado externo: lee Markdown, produce modelos existentes y no conoce",
+            "el motor, los reportes ni la CLI. Sus helpers nuevos seran privados y el modulo se",
+            "mantendra por debajo de 300 lineas.",
+            "",
+            "## Components and Interfaces",
+            "",
+            "#### API publica preservada",
+            "",
+            "La implementacion mantiene exactamente estas firmas y tipos de retorno:",
+            "",
+            "```python",
+            "def parse_requirements(path: Path) -> list[Requirement]: ...",
+            "def parse_tasks(path: Path) -> list[SpecTask]: ...",
+            "def load_spec(spec_dir: Path) -> tuple[list[Requirement], list[SpecTask]]: ...",
+            "```",
+            "",
+            "`load_spec` conserva su composicion actual: busca `requirements.md` y `tasks.md`,",
+            "devuelve una lista vacia por cada archivo ausente y delega en los dos parsers. Las",
+            "regex compiladas y los helpers de segmentacion permanecen internos; no se expone",
+            "una clase ni una API nueva.",
+            "",
+            "#### Parseo de requisitos por regex y estados",
+            "",
+            "`parse_requirements` lee UTF-8 una vez, usa `splitlines()` y hace dos pasadas",
+            "lineales. La primera reconoce limites de cuerpos y la segunda extrae campos de cada",
+            "cuerpo. La regex de encabezado, anclada a la linea completa y con `re.IGNORECASE`,",
+            "nace del siguiente esquema:",
+            "",
+            "```text",
+            "^(?P<level>#{2,4})(?!#)[ \\t]+(?:Requirement|Requisito)[ \\t]+",
+            "(?P<id>\\d+)(?=$|[ \\t]|:)(?:[ \\t]*:[ \\t]*|[ \\t]+)?",
+            "(?P<title>.*?)[ \\t]*$",
+            "```",
+            "",
+            "El esquema acepta solo niveles `##`, `###` y `####`, etiquetas inglesas o",
+            "espanolas y dos formas despues del ID: `N: titulo` y `N titulo`, ademas de un",
+            "encabezado sin titulo. El ID se conserva como texto numerico; el titulo se recorta.",
+            "Si queda vacio se usa el fallback estable `Requirement <id>` para conservar el",
+            "contrato del modelo actual.",
+            "",
+            "Cada coincidencia abre un `Requirement_Body`. Su inicio es la linea siguiente y su",
+            "fin es la siguiente linea que coincida con la misma regex de requisito, o EOF. Un",
+            "encabezado Markdown no reconocido permanece dentro del cuerpo y no crea ni corta",
+            "requisitos. Los segmentos se procesan en el orden de sus offsets, por lo que los",
+            "`Requirement` resultantes conservan estrictamente el orden documental.",
+            "",
+            "Dentro de cada cuerpo se usa el estado `OUTSIDE_CRITERIA` o `IN_CRITERIA`. Un",
+            "encabezado Markdown `#{1,6}` cuyo texto sea `Acceptance Criteria` o",
+            "`Criterios de Aceptacion`/`Criterios de AceptaciÃ³n`, con colon opcional y sin",
+            "importar mayusculas, entra en `IN_CRITERIA` y registra su nivel. Otro encabezado de",
+            "nivel igual o menor sale de la seccion; uno mas profundo se considera contenido de",
+            "la seccion. El limite del `Requirement_Body` siempre termina ambos estados.",
+            "",
+            "Solo en `IN_CRITERIA` se aplica una regex de entrada equivalente a:",
+            "",
+            "```text",
+            "^[ \\t]*(?:(?P<number>\\d+)[.)]|[-*])[ \\t]+(?P<text>\\S.*?)\\s*$",
+            "```",
+            "",
+            "Esto admite `1.`, `1)`, `-` y `*`, ignora listas de introduccion, historia o notas",
+            "fuera de la seccion, recorta el texto y conserva el orden de aparicion. Cada",
+            "criterio recibe un ID estable `<requirement-id>.<ordinal>` segun su posicion",
+            "aceptada en el cuerpo; asi los bullets y listas mixtas son univocos aunque la",
+            "numeracion fuente este repetida o salte valores. Las lineas no marcadas dentro de",
+            "la seccion no generan criterios.",
+            "",
+            "La historia se busca en todo el cuerpo, independientemente del estado de criterios,",
+            "con una regex anclada que reconoce `**User Story:**` y",
+            "`**Historia de Usuario:**` (colon opcional dentro de la negrita). Se toma la",
+            "primera etiqueta reconocida y se recorta el texto posterior; si no existe o esta",
+            "vacio, `user_story` conserva `\"\"`.",
+            "",
+            "Un cuerpo sin encabezado de criterios nunca entra en `IN_CRITERIA`; una seccion",
+            "vacia nunca produce entradas. En ambos casos se devuelve el requisito con",
+            "`criteria=[]` y el procesamiento continua desde el siguiente segmento ya",
+            "delimitado, evitando que contenido de un requisito contamine al siguiente.",
+            "",
+            "#### Parseo de tareas por regex y estados",
+            "",
+            "`parse_tasks` recorre `tasks.md` una vez y reconoce solo lineas de tarea con el",
+            "esquema:",
+            "",
+            "```text",
+            "^[ \\t]*-[ \\t]+\\[(?P<state>[ xX])\\][ \\t]+",
+            "(?P<id>\\d+(?:\\.\\d+)*)(?:\\.)?[ \\t]+(?P<text>.*?)\\s*$",
+            "```",
+            "",
+            "El grupo de ID captura la secuencia completa antes del punto separador opcional;",
+            "por ello `8`, `8.1` y `8.1.2.3` son validos sin imponer profundidad maxima. No se",
+            "generan IDs sinteticos para lineas sin ID. Un espacio mapea a `done=False`; `x` y",
+            "`X` mapean a `done=True`; otros caracteres de checkbox no son tareas validas. Los",
+            "objetos se agregan al coincidir, preservando el orden documental.",
+            "",
+            "Despues de una tarea reconocida, el estado `CURRENT_TASK` permite buscar la",
+            "referencia `_Requirements: ..._` en sus lineas subordinadas hasta la siguiente",
+            "linea de tarea. Se conserva la extraccion actual de referencias separadas por",
+            "coma. La deteccion de estado e ID ocurre solo en la linea principal y no cambia el",
+            "contrato de `SpecTask`."
+          ],
+          "removed": [
+            "## Components",
+            "Regex tolerantes al formato real de Kiro: headers `### Requirement N`,",
+            "user stories en negrita, criterios EARS numerados, checkboxes de tasks.md con",
+            "referencias `_Requirements: x.y_`. Soporta headers en espanol."
+          ]
+        },
+        {
+          "header": "markdown_report.py genera el reporte legible que se publica como comentario de P",
+          "added": [
+            "## Data Models",
+            "",
+            "No cambia ningun modelo publico. `Requirement` mantiene `id`, `title`,",
+            "`user_story` y `criteria`; `AcceptanceCriterion` mantiene `id` y `text`; y",
+            "`SpecTask` mantiene `id`, `text`, `done` y `requirement_refs`. El parser normaliza",
+            "solo whitespace de bordes y estado de checkbox, sin retener sintaxis Markdown, por",
+            "lo que es deliberadamente lossy.",
+            "## Correctness Properties",
+            "",
+            "*A property is a characteristic or behavior that should hold true across all valid executions of a system-essentially, a formal statement about what the system should do. Properties serve as the bridge between human-readable specifications and machine-verifiable correctness guarantees.*",
+            "",
+            "La reflexion de propiedades consolida encabezados con segmentacion porque ambos se",
+            "verifican sobre la misma secuencia ordenada, y consolida marcadores con secciones",
+            "vacias porque ambos dependen del estado de criterios. La historia y las tareas se",
+            "mantienen separadas: tienen gramaticas y salidas independientes. Las firmas",
+            "publicas son checks de compatibilidad, no propiedades aleatorias.",
+            "",
+            "### Property 1: Reconocimiento, orden y aislamiento de requisitos",
+            "",
+            "For any documento generado con cero o mas bloques cuyos encabezados reconocidos",
+            "varien en nivel `##`-`####`, idioma, colon, whitespace, ID y titulo, intercalados",
+            "con encabezados no reconocidos y contenido arbitrario, `parse_requirements` debe",
+            "devolver exactamente un requisito por encabezado reconocido, con ID y titulo",
+            "normalizados, en el mismo orden, y sin usar contenido posterior al siguiente",
+            "encabezado reconocido para completar el bloque anterior.",
+            "",
+            "**Validates: Requirements 1.1, 1.2**",
+            "",
+            "### Property 2: Criterios confinados a su seccion",
+            "",
+            "For any secuencia generada de cuerpos de requisito con secciones de criterios",
+            "pobladas, vacias o ausentes, la lista resultante debe contener exactamente los",
+            "textos recortados de las entradas `N.`, `N)`, `-` y `*` encontradas mientras el",
+            "estado esta dentro de la seccion, en orden documental; entradas con la misma forma",
+            "fuera de ella no deben aparecer y una seccion vacia o ausente no debe afectar a",
+            "requisitos posteriores.",
+            "",
+            "**Validates: Requirements 1.3, 1.5**",
+            "",
+            "### Property 3: Extraccion bilingue de historia de usuario",
+            "",
+            "For any cuerpo de requisito generado que contenga una etiqueta valida",
+            "`**User Story:**` o `**Historia de Usuario:**` y texto arbitrario, el requisito",
+            "resultante debe contener exactamente el primer texto de historia reconocido con",
+            "whitespace de bordes eliminado; etiquetas negritas no reconocidas no deben",
+            "modificarlo.",
+            "",
+            "**Validates: Requirements 1.4**",
+            "",
+            "### Property 4: Identidad, estado y orden de tareas",
+            "",
+            "For any lista generada de tareas con IDs numericos de una o mas partes separadas",
+            "por puntos y estados de checkbox espacio, `x` o `X`, `parse_tasks` debe conservar",
+            "cada ID completo y el orden documental, mapear solo el espacio a `False`, mapear",
+            "`x` y `X` a `True`, y asociar las referencias subordinadas con la tarea que las",
+            "precede.",
+            "",
+            "**Validates: Requirements 1.6**",
+            "",
+            "- Lineas parecidas pero fuera de la gramatica reconocida se ignoran; no producen",
+            "  objetos parciales ni excepciones de parseo.",
+            "- Un requisito sin historia, sin seccion de criterios o con seccion vacia conserva",
+            "  valores vacios y no interrumpe el siguiente requisito.",
+            "- Checkboxes con estados distintos de espacio, `x` o `X`, o tareas sin ID numerico,",
+            "  se ignoran. Los errores reales de lectura de `Path` conservan el comportamiento",
+            "  normal de I/O y no se silencian.",
+            "- `load_spec` conserva listas vacias para `requirements.md` o `tasks.md` ausentes.",
+            "La tarea 8 usa pruebas unitarias de ejemplo, regresion y property-based testing",
+            "sobre funciones puras. No se necesita una propiedad round-trip: el parser descarta",
+            "marcadores, encabezados y whitespace deliberadamente, por lo que no existe una",
+            "serializacion inversa fiel.",
+            "",
+            "### Fixtures nuevos de tarea 8",
+            "",
+            "Se agregaran al menos estos cuatro archivos, pequenos y legibles:",
+            "",
+            "1. `tests/fixtures/requirements_heading_variants.md`: niveles `##` a `####`,",
+            "   `Requirement`/`Requisito`, con/sin colon, titulos ausentes, encabezados no",
+            "   reconocidos, limites de cuerpo y orden.",
+            "2. `tests/fixtures/requirements_criteria_variants.md`: entradas `1.`, `2)`, `-` y",
+            "   `*`, whitespace, listas-cebo fuera de la seccion, orden y una subseccion que",
+            "   termina el estado de criterios.",
+            "3. `tests/fixtures/requirements_stories_empty_sections.md`: ambas etiquetas",
+            "   negritas, secciones vacias y requisitos sin seccion seguidos de un requisito",
+            "   poblado para probar continuidad.",
+            "4. `tests/fixtures/tasks_nested_ids_states.md`: IDs como `8`, `8.1` y",
+            "   `8.1.2.3`, estados espacio/`x`/`X`, referencias, orden y checkboxes invalidos.",
+            "",
+            "### Pruebas de ejemplo y regresion",
+            "",
+            "- Extender `tests/test_spec_parser.py` con pruebas parametrizadas sobre los cuatro",
+            "  fixtures y aserciones de IDs, titulos, historias, criterios, estados, referencias",
+            "  y orden exactos.",
+            "- Mantener sin cambios los fixtures canonicos existentes",
+            "  `tests/fixtures/requirements.md` y `tests/fixtures/tasks.md`; sus pruebas actuales",
+            "  deben seguir pasando para detectar regresiones del formato ya soportado.",
+            "- Agregar smoke tests de `parse_requirements(path: Path) -> list[Requirement]`,",
+            "  `parse_tasks(path: Path) -> list[SpecTask]` y",
+            "  `load_spec(spec_dir: Path) -> tuple[list[Requirement], list[SpecTask]]`, incluida",
+            "  la respuesta de `load_spec` cuando falta uno de los archivos.",
+            "- Cubrir ejemplos negativos: nivel `#` o `#####`, etiqueta desconocida, criterio",
+            "  fuera de seccion, checkbox invalido e ID de tarea no numerico.",
+            "",
+            "### Property-based testing",
+            "",
+            "Se usara Hypothesis como dependencia exclusiva del extra `dev`, fijada a una",
+            "version exacta al implementarse; no se agrega ninguna dependencia al nucleo. Cada",
+            "propiedad tendra un unico test con minimo 100 ejemplos y generadores acotados de",
+            "lineas Markdown/Unicode para mantener las pruebas rapidas en Python 3.10+.",
+            "",
+            "Cada test incluira un comentario con este formato y el texto de su propiedad:",
+            "",
+            "```text",
+            "Feature: specguard-core, Property 1: Reconocimiento, orden y aislamiento de requisitos",
+            "```",
+            "",
+            "Los cuatro tests corresponderan uno-a-uno con las propiedades 1-4. Los generadores",
+            "construiran archivos temporales y modelos esperados desde componentes separados,",
+            "para no duplicar la regex productiva como oraculo. Las pruebas de ejemplo cubren",
+            "casos concretos y errores; las propiedades cubren combinaciones amplias sin",
+            "multiplicar unit tests redundantes.",
+            "",
+            "Finalmente se ejecutaran `pytest` y `ruff check src tests`. El modulo",
+            "`kiro_spec.py`, el archivo de pruebas y cada fixture se mantendran por debajo de",
+            "300 lineas."
+          ],
+          "removed": [
+            "## Data Model",
+            "Unit tests por parser con fixtures de archivos reales de Kiro, tests del motor",
+            "con objetos construidos a mano, y un test de humo del CLI via CliRunner."
+          ]
+        }
+      ],
+      "symbols": [
+        "parse_requirements",
+        "parse_tasks",
+        "load_spec"
+      ]
+    },
+    {
+      "path": ".kiro/specs/specguard-core/requirements.md",
+      "status": "modified",
+      "hunks": [
+        {
+          "header": "",
+          "added": [
+            "spec-driven development con Kiro. Compara los specs (`.kiro/specs/`) contra el",
+            "## Glossary",
+            "",
+            "- **Kiro_Spec_Parser**: The SpecGuard component that loads and parses Kiro `requirements.md` and `tasks.md` files.",
+            "- **Requirement_Body**: The content after a recognized requirement heading and before the next recognized requirement heading or the end of the document.",
+            "- **Acceptance_Criteria_Section**: The portion of a Requirement_Body introduced by an acceptance-criteria heading.",
+            "- **Acceptance_Criterion**: A numbered or bulleted list entry in an Acceptance_Criteria_Section.",
+            "- **Task_ID**: A numeric task identifier composed of one or more dot-separated segments, with each segment containing one or more digits.",
+            "- **Checkbox_State**: A task checkbox containing a space for incomplete, or `x` or `X` for complete.",
+            "- **Public_API**: A callable interface that external SpecGuard consumers can import and invoke.",
+            "- **Path**: The `pathlib.Path` type accepted by the parser interfaces.",
+            "- **Requirement**: The structured requirement model returned by the parser.",
+            "- **SpecTask**: The structured task model returned by the parser.",
+            "- **Git_Diff_Parser**: The SpecGuard component that obtains and parses unified git diffs.",
+            "- **Traceability_Engine**: The deterministic SpecGuard component that matches requirements, tasks, and changed files.",
+            "- **Semantic_Refiner**: The optional SpecGuard component that refines heuristic findings through Amazon Bedrock.",
+            "- **Reporting_System**: The SpecGuard component that writes audit reports.",
+            "- **SpecGuard_CLI**: The SpecGuard command-line interface.",
+            "- **GitHub_Actions_Workflow**: The pull-request workflow that runs SpecGuard.",
+            "- **Dashboard**: The static SpecGuard traceability report viewer.",
+            "- **Finding**: An actionable audit result associated with a requirement, task, or changed file.",
+            "- **Heuristic_Result**: The findings produced by the Traceability_Engine before semantic refinement.",
+            "- **Traceability_Score**: The percentage of parsed requirements that have at least one matching changed file.",
+            "",
+            "## Requirements",
+            "",
+            "**User Story:** As a developer, I want SpecGuard to parse real-world Kiro spec variations, so that requirements, acceptance criteria, user stories, and tasks become structured data without breaking existing integrations.",
+            "1. WHEN a `requirements.md` heading at level `##`, `###`, or `####` starts with English `Requirement N` or Spanish `Requisito N`, with or without a colon after the numeric identifier `N`, THE Kiro_Spec_Parser SHALL extract `N`, trim surrounding whitespace from a title when a title is present, and associate the Requirement_Body with the parsed Requirement.",
+            "2. WHEN a `requirements.md` file contains multiple recognized requirement headings, THE Kiro_Spec_Parser SHALL return the parsed Requirement objects in document order and delimit each Requirement_Body at the next recognized requirement heading or the end of the document.",
+            "3. WHEN an Acceptance_Criteria_Section contains entries marked by a numeric identifier followed by `.` or `)`, `-`, or `*`, THE Kiro_Spec_Parser SHALL extract the trimmed Acceptance_Criterion text in document order.",
+            "4. WHEN a Requirement_Body contains the bold label `**User Story:**` or `**Historia de Usuario:**`, THE Kiro_Spec_Parser SHALL extract the trimmed text following the label as the user story.",
+            "5. IF a Requirement_Body has no Acceptance_Criteria_Section or the Acceptance_Criteria_Section has no list entries, THEN THE Kiro_Spec_Parser SHALL return the Requirement with an empty acceptance-criteria collection and continue parsing subsequent recognized requirements.",
+            "6. WHEN a `tasks.md` file contains a task with a Checkbox_State and a Task_ID of arbitrary segment depth, THE Kiro_Spec_Parser SHALL extract the complete Task_ID, map a space to incomplete, map `x` or `X` to complete, and return parsed SpecTask objects in document order.",
+            "7. THE Kiro_Spec_Parser SHALL preserve `parse_requirements(path: Path) -> list[Requirement]` as a Public_API signature.",
+            "8. THE Kiro_Spec_Parser SHALL preserve `parse_tasks(path: Path) -> list[SpecTask]` as a Public_API signature.",
+            "9. THE Kiro_Spec_Parser SHALL preserve `load_spec(spec_dir: Path) -> tuple[list[Requirement], list[SpecTask]]` as a Public_API signature."
+          ],
+          "removed": [
+            "spec-driven development con Kiro. Compara los specs (.kiro/specs/) contra el",
+            "**User Story:** As a developer, I want SpecGuard to parse Kiro spec files, so that requirements, criteria and tasks become structured data.",
+            "1. WHEN a requirements.md file follows the Kiro format THEN the system SHALL extract each requirement with id, title, user story and acceptance criteria",
+            "2. WHEN a criterion uses EARS syntax (WHEN/IF/WHILE...THEN...SHALL) THEN the system SHALL capture it with a compound id (e.g. 1.2)",
+            "3. WHEN a tasks.md file contains checkbox items THEN the system SHALL extract each task with its done state and requirement references",
+            "4. IF headers are written in Spanish (Requisito N) THEN the system SHALL parse them equally"
+          ]
+        },
+        {
+          "header": "veredictos accionables.",
+          "added": [
+            "1. WHEN a git reference is provided, THE Git_Diff_Parser SHALL obtain the unified diff through the git CLI.",
+            "2. WHEN a unified diff contains an added line that defines a function or class in Python, JavaScript, or TypeScript, THE Git_Diff_Parser SHALL extract the defined symbol name.",
+            "3. WHEN a unified diff identifies a file as new or deleted, THE Git_Diff_Parser SHALL record the corresponding file status."
+          ],
+          "removed": [
+            "1. WHEN a git reference is provided THEN the system SHALL obtain the unified diff via the git CLI",
+            "2. WHEN a diff contains added lines defining functions or classes THEN the system SHALL extract those symbol names for Python, JavaScript and TypeScript",
+            "3. WHEN a file is new or deleted THEN the system SHALL record its status accordingly"
+          ]
+        },
+        {
+          "header": "veredictos accionables.",
+          "added": [
+            "1. WHEN parsed requirements and changed files are available, THE Traceability_Engine SHALL compute a coverage map from each requirement identifier to matching changed-file paths.",
+            "2. WHEN a parsed requirement has no matching changed file, THE Traceability_Engine SHALL emit an `uncovered_requirement` Finding for the requirement identifier.",
+            "3. WHEN a parsed task is marked complete and has no related changed file, THE Traceability_Engine SHALL emit a `phantom_task` Finding for the Task_ID.",
+            "4. WHEN a changed file matches no parsed requirement, THE Traceability_Engine SHALL emit an `orphan_code` Finding for the changed-file path.",
+            "5. WHEN a covered requirement has no associated changed test file, THE Traceability_Engine SHALL emit an `untested_criterion` Finding for the requirement identifier.",
+            "6. WHEN a heuristic audit completes, THE Traceability_Engine SHALL compute the Traceability_Score."
+          ],
+          "removed": [
+            "1. WHEN requirements and changes are available THEN the system SHALL compute a coverage map from requirement ids to file paths",
+            "2. WHEN a requirement has no matching change THEN the system SHALL emit an uncovered_requirement finding",
+            "3. WHEN a task is marked done and no related code change exists THEN the system SHALL emit a phantom_task finding",
+            "4. WHEN a changed file matches no requirement THEN the system SHALL emit an orphan_code finding",
+            "5. WHEN a covered requirement has no associated test change THEN the system SHALL emit an untested_criterion finding",
+            "6. WHEN the audit completes THEN the system SHALL compute a traceability score as the percentage of covered requirements"
+          ]
+        },
+        {
+          "header": "veredictos accionables.",
+          "added": [
+            "1. WHERE semantic refinement is enabled, WHEN a Heuristic_Result is available, THE Semantic_Refiner SHALL send the parsed requirements, parsed tasks, truncated unified diff, and Heuristic_Result to Amazon Bedrock.",
+            "2. WHEN Amazon Bedrock returns a valid JSON array of findings, THE Semantic_Refiner SHALL replace the findings in the Heuristic_Result with the returned findings.",
+            "3. IF the Amazon Bedrock call or response processing fails, THEN THE Semantic_Refiner SHALL return the Heuristic_Result and allow report generation to complete."
+          ],
+          "removed": [
+            "1. WHEN the --semantic flag is used THEN the system SHALL send requirements, tasks, truncated diff and preliminary findings to Amazon Bedrock",
+            "2. WHEN Bedrock returns a valid JSON array THEN the system SHALL replace the preliminary findings with the refined ones",
+            "3. IF the Bedrock call fails for any reason THEN the system SHALL fall back to the heuristic result without crashing"
+          ]
+        },
+        {
+          "header": "veredictos accionables.",
+          "added": [
+            "1. WHEN an audit completes, THE Reporting_System SHALL write `report.json` and `report.md` to the configured output directory.",
+            "2. WHEN an audit runs in a terminal, THE SpecGuard_CLI SHALL print a color-coded findings table and the Traceability_Score.",
+            "3. WHERE `--fail-under` is provided, WHEN the Traceability_Score is below the provided threshold, THE SpecGuard_CLI SHALL exit with code `1`."
+          ],
+          "removed": [
+            "1. WHEN an audit completes THEN the system SHALL write report.json and report.md to the output directory",
+            "2. WHEN the audit runs in a terminal THEN the system SHALL print a color-coded findings table and the traceability score",
+            "3. WHEN --fail-under is provided and the score is below the threshold THEN the system SHALL exit with code 1"
+          ]
+        },
+        {
+          "header": "veredictos accionables.",
+          "added": [
+            "1. WHEN a pull request is opened or updated, THE GitHub_Actions_Workflow SHALL run a SpecGuard audit against the pull request base branch.",
+            "2. WHEN a SpecGuard audit produces a Markdown report, THE GitHub_Actions_Workflow SHALL post the Markdown report as a pull-request comment."
+          ],
+          "removed": [
+            "1. WHEN a pull request is opened or updated THEN the workflow SHALL run specguard audit against the base branch",
+            "2. WHEN the audit produces a markdown report THEN the workflow SHALL post it as a PR comment"
+          ]
+        },
+        {
+          "header": "veredictos accionables.",
+          "added": [
+            "1. WHEN `report.json` is available, THE Dashboard SHALL render the requirement-to-file matrix with a traffic-light color scheme.",
+            "2. WHEN `report.json` contains findings, THE Dashboard SHALL list the findings grouped by verdict.",
+            "3. WHERE the Dashboard is deployed as static files, THE Dashboard SHALL load and render the traceability report using static client-side resources."
+          ],
+          "removed": [
+            "1. WHEN report.json is available THEN the dashboard SHALL render the requirement/file matrix with a traffic-light color scheme",
+            "2. WHEN a finding exists THEN the dashboard SHALL list it grouped by verdict",
+            "3. WHEN the dashboard is deployed as static files THEN it SHALL work without any backend"
+          ]
+        }
+      ],
+      "symbols": []
+    },
+    {
+      "path": ".kiro/specs/specguard-core/tasks.md",
+      "status": "modified",
+      "hunks": [
+        {
+          "header": "",
+          "added": [
+            "## Overview",
+            "",
+            "This plan preserves the existing SpecGuard implementation sequence while hardening task 8 against documented real-world Kiro spec variations.",
+            "",
+            "## Tasks",
+            ""
+          ],
+          "removed": []
+        },
+        {
+          "header": "",
+          "added": [
+            "- [x] 8. Harden spec parser against real-world Kiro spec variations",
+            "  - Parse `##` through `####` English `Requirement N` and Spanish `Requisito N` headings with or without colons, preserving document order and requirement-body boundaries",
+            "  - Parse numbered (`.` or `)`), `-`, and `*` acceptance-criteria entries in document order, both bold user-story labels, and empty or missing acceptance-criteria sections without interrupting later requirements",
+            "  - Parse complete arbitrary-depth dot-separated numeric task identifiers and map blank, `x`, and `X` checkbox states while preserving task document order",
+            "  - Preserve the public signatures of `parse_requirements`, `parse_tasks`, and `load_spec`",
+            "  - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9_"
+          ],
+          "removed": [
+            "- [ ] 8. Harden spec parser against real-world Kiro spec variations",
+            "  - Collect specs generated by Kiro during development and extend fixtures",
+            "  - _Requirements: 1.1, 1.2, 1.3_"
+          ]
+        },
+        {
+          "header": "",
+          "added": [
+            "- [x] 13. Integration test: SpecGuard auditing its own repository",
+            "",
+            "## Task Dependency Graph",
+            "",
+            "```json",
+            "{",
+            "  \"waves\": [",
+            "    {\"wave\": 1, \"tasks\": [\"1\"]},",
+            "    {\"wave\": 2, \"tasks\": [\"2\", \"3\"]},",
+            "    {\"wave\": 3, \"tasks\": [\"4\", \"5\", \"6\", \"7\"]},",
+            "    {\"wave\": 4, \"tasks\": [\"8\", \"9\", \"10\", \"11\"]},",
+            "    {\"wave\": 5, \"tasks\": [\"12\"]},",
+            "    {\"wave\": 6, \"tasks\": [\"13\"]}",
+            "  ]",
+            "}",
+            "```",
+            "",
+            "## Notes",
+            "",
+            "- Task numbering and completion states are preserved.",
+            "- Tasks 9 through 13 are unchanged."
+          ],
+          "removed": [
+            "- [ ] 13. Integration test: SpecGuard auditing its own repository"
+          ]
+        }
+      ],
+      "symbols": []
+    },
+    {
+      "path": ".kiro/steering/tech.md",
+      "status": "modified",
+      "hunks": [
+        {
+          "header": "",
+          "added": [
+            "## Precios de Kiro (verificado 2026-07-24)",
+            "- Confirmado y vigente en kiro.dev/pricing: usar Sonnet 4.6 cuesta 1.3x lo que cuesta Auto para",
+            "  la misma tarea. No hay multiplicador oficial publicado para Haiku ni Opus.",
+            "- El \"5x vibe vs spec\" que se manejaba antes ya no aplica: Kiro unifico el cobro en un solo pool",
+            "  de creditos \"Auto\" facturado por complejidad de tarea/uso de tokens (cambio de sept. 2025), no",
+            "  por categoria de sesion. No planificar el presupuesto de creditos asumiendo ese multiplicador.",
+            ""
+          ],
+          "removed": []
+        }
+      ],
+      "symbols": []
+    },
+    {
+      "path": "dashboard/index.html",
+      "status": "modified",
+      "hunks": [
+        {
+          "header": "const LABELS = {",
+          "added": [
+            "function esc(value) {",
+            "  return String(value).replace(/[&<>\"']/g, (c) => ({",
+            "    \"&\": \"&amp;\", \"<\": \"&lt;\", \">\": \"&gt;\", '\"': \"&quot;\", \"'\": \"&#39;\",",
+            "  }[c]));",
+            "}",
+            "",
+            "    const hint = location.protocol === \"file:\"",
+            "      ? \"No se pudo cargar report.json (abriste el archivo directamente: corre 'python -m http.server' en esta carpeta).\"",
+            "      : \"No se encontro report.json junto al dashboard.\";",
+            "    document.getElementById(\"meta\").textContent = hint;"
+          ],
+          "removed": [
+            "    document.getElementById(\"meta\").textContent = \"No se encontro report.json junto al dashboard.\";"
+          ]
+        },
+        {
+          "header": "async function load() {",
+          "added": [
+            "      `<td><b>${esc(req.id)}</b> ${esc(req.title)}</td>` +",
+            "      `<td class=\"files\">${files.length ? files.map(esc).join(\"<br>\") : \"(ninguno)\"}</td>`;"
+          ],
+          "removed": [
+            "      `<td><b>${req.id}</b> ${req.title}</td>` +",
+            "      `<td class=\"files\">${files.length ? files.join(\"<br>\") : \"(ninguno)\"}</td>`;"
+          ]
+        },
+        {
+          "header": "async function load() {",
+          "added": [
+            "      `<span class=\"dot ${f.verdict}\"></span>${esc(LABELS[f.verdict] || f.verdict)}</span> ` +",
+            "      `<b>${esc(f.subject_id)}</b><div class=\"d\">${esc(f.detail)}</div>`;"
+          ],
+          "removed": [
+            "      `<span class=\"dot ${f.verdict}\"></span>${LABELS[f.verdict] || f.verdict}</span> ` +",
+            "      `<b>${f.subject_id}</b><div class=\"d\">${f.detail}</div>`;"
+          ]
+        }
+      ],
+      "symbols": [
+        "esc",
+        "String",
+        "hint"
+      ]
+    },
+    {
+      "path": "docs/kiro-workflow.md",
+      "status": "modified",
+      "hunks": [
+        {
+          "header": "Regla del equipo: ninguna feature del motor entra sin pasar por el spec.",
+          "added": [
+            "Actualizacion verificada 2026-07-24: el multiplicador \"5x vibe vs spec\" que se asumia aqui ya no",
+            "es como Kiro factura. Desde el cambio a precios \"Auto\" (sept. 2025), todo el consumo sale de un",
+            "solo pool de creditos tasado por complejidad de tarea y uso de tokens, no por si la sesion es vibe",
+            "o spec. El unico multiplicador oficial vigente es el de modelo: Sonnet 4.6 cuesta 1.3x lo que Auto",
+            "para la misma tarea (ver `.kiro/steering/tech.md`). Estrategia actualizada:",
+            "",
+            "1. Usar Auto por defecto para casi todo; es la palanca de ahorro real hoy, no el modo de sesion.",
+            "2. Reservar Sonnet 4.6 para las tareas de diseno/arquitectura donde Auto se quede corto (tarea 8",
+            "   ya se beneficio de esto)."
+          ],
+          "removed": [
+            "Las sesiones spec cuestan aproximadamente 5x lo que una sesion vibe. Estrategia:",
+            "",
+            "1. Explorar y prototipar en vibe con Auto (barato).",
+            "2. Ejecutar las tareas del spec en modo spec, en pasos pequenos y acotados."
+          ]
+        }
+      ],
+      "symbols": []
+    },
+    {
+      "path": "pyproject.toml",
+      "status": "modified",
+      "hunks": [
+        {
+          "header": "dependencies = [",
+          "added": [
+            "dev = [\"pytest>=8.0\", \"ruff>=0.4\", \"hypothesis==6.161.2\"]"
+          ],
+          "removed": [
+            "dev = [\"pytest>=8.0\", \"ruff>=0.4\"]"
+          ]
+        }
+      ],
+      "symbols": []
+    },
+    {
+      "path": "src/specguard/engine/heuristic.py",
+      "status": "modified",
+      "hunks": [
+        {
+          "header": "def detect_findings(",
+          "added": [
+            "        elif not any(p in test_paths for p in coverage[req.id]):"
+          ],
+          "removed": [
+            "        elif not any(p in test_paths for p in coverage[req.id]) and not test_paths:"
+          ]
+        }
+      ],
+      "symbols": []
+    },
+    {
+      "path": "src/specguard/parsers/kiro_spec.py",
+      "status": "modified",
+      "hunks": [
+        {
+          "header": "from pathlib import Path",
+          "added": [
+            "REQ_HEADER = re.compile(",
+            "    r\"^(?P<level>#{2,4})(?!#)[ \\t]+(?:Requirement|Requisito)[ \\t]+\"",
+            "    r\"(?P<id>\\d+)(?=$|[ \\t]|:)(?:[ \\t]*:[ \\t]*|[ \\t]+)?\"",
+            "    r\"(?P<title>.*?)[ \\t]*$\",",
+            "    re.IGNORECASE,",
+            ")",
+            "HEADING = re.compile(r\"^(?P<level>#{1,6})(?!#)[ \\t]+(?P<text>.*?)[ \\t]*$\")",
+            "CRITERIA_HEADING_TEXT = re.compile(",
+            "    r\"^(?:Acceptance Criteria|Criterios de Aceptaci[oÃ³]n):?$\", re.IGNORECASE",
+            ")",
+            "CRITERION_ENTRY = re.compile(r\"^[ \\t]*(?:\\d+[.)]|[-*])[ \\t]+(?P<text>\\S.*?)\\s*$\")",
+            "USER_STORY = re.compile(",
+            "    r\"^[ \\t]*\\*\\*(?:User Story|Historia de Usuario):?\\*\\*[ \\t]*(?P<text>.*?)\\s*$\",",
+            "    re.IGNORECASE,",
+            ")",
+            "TASK_LINE = re.compile(",
+            "    r\"^[ \\t]*-[ \\t]+\\[(?P<state>[ xX])\\][ \\t]+\"",
+            "    r\"(?P<id>\\d+(?:\\.\\d+)*)(?:\\.)?[ \\t]+(?P<text>.*?)\\s*$\"",
+            ")",
+            "def _requirement_bodies(lines: list[str]) -> list[tuple[str, str, list[str]]]:",
+            "    headers: list[tuple[int, str, str]] = []",
+            "    for i, line in enumerate(lines):",
+            "        m = REQ_HEADER.match(line.rstrip())",
+            "            headers.append((i, m.group(\"id\"), m.group(\"title\").strip()))",
+            "    bodies = []",
+            "    for idx, (start, req_id, title) in enumerate(headers):",
+            "        end = headers[idx + 1][0] if idx + 1 < len(headers) else len(lines)",
+            "        bodies.append((req_id, title or f\"Requirement {req_id}\", lines[start + 1 : end]))",
+            "    return bodies",
+            "",
+            "",
+            "def _parse_body(req_id: str, body: list[str]) -> tuple[str, list[AcceptanceCriterion]]:",
+            "    user_story = \"\"",
+            "    criteria: list[AcceptanceCriterion] = []",
+            "    in_criteria = False",
+            "    criteria_level = 0",
+            "    ordinal = 0",
+            "    for raw in body:",
+            "        line = raw.rstrip()",
+            "        h = HEADING.match(line)",
+            "        if h:",
+            "            level = len(h.group(\"level\"))",
+            "            if CRITERIA_HEADING_TEXT.match(h.group(\"text\").strip()):",
+            "                in_criteria, criteria_level = True, level",
+            "            elif in_criteria and level <= criteria_level:",
+            "                in_criteria, criteria_level = False, 0",
+            "        if not user_story:",
+            "            m = USER_STORY.match(line)",
+            "            if m:",
+            "                user_story = m.group(\"text\").strip()",
+            "                continue",
+            "        if in_criteria:",
+            "            m = CRITERION_ENTRY.match(line)",
+            "            if m:",
+            "                ordinal += 1",
+            "                criteria.append(",
+            "                    AcceptanceCriterion(id=f\"{req_id}.{ordinal}\", text=m.group(\"text\").strip())",
+            "                )",
+            "    return user_story, criteria",
+            "",
+            "",
+            "def parse_requirements(path: Path) -> list[Requirement]:",
+            "    lines = path.read_text(encoding=\"utf-8\").splitlines()",
+            "    requirements = []",
+            "    for req_id, title, body in _requirement_bodies(lines):",
+            "        user_story, criteria = _parse_body(req_id, body)",
+            "        requirements.append(",
+            "            Requirement(id=req_id, title=title, user_story=user_story, criteria=criteria)",
+            "        )",
+            "        m = TASK_LINE.match(raw.rstrip())",
+            "        done = m.group(\"state\").lower() == \"x\"",
+            "        for lookahead in lines[i + 1 :]:",
+            "            if TASK_LINE.match(lookahead.rstrip()):",
+            "        tasks.append(",
+            "            SpecTask(id=m.group(\"id\"), text=m.group(\"text\").strip(), done=done, requirement_refs=refs)",
+            "        )"
+          ],
+          "removed": [
+            "REQ_HEADER = re.compile(r\"^#{2,4}\\s*Requirement\\s+(\\d+)\\s*:?\\s*(.*)$\", re.IGNORECASE)",
+            "REQ_HEADER_ES = re.compile(r\"^#{2,4}\\s*Requisito\\s+(\\d+)\\s*:?\\s*(.*)$\", re.IGNORECASE)",
+            "USER_STORY = re.compile(r\"\\*\\*User Story:?\\*\\*\\s*(.*)\", re.IGNORECASE)",
+            "CRITERION = re.compile(r\"^\\s*(\\d+)[.)]\\s+(WHEN|IF|WHILE|WHERE|THE SYSTEM|CUANDO|SI)\\b(.*)\", re.IGNORECASE)",
+            "TASK_LINE = re.compile(r\"^\\s*-\\s*\\[( |x|X)\\]\\s*(\\d+(?:\\.\\d+)*)?\\.?\\s*(.*)$\")",
+            "def parse_requirements(path: Path) -> list[Requirement]:",
+            "    requirements: list[Requirement] = []",
+            "    current: Requirement | None = None",
+            "    for raw in path.read_text(encoding=\"utf-8\").splitlines():",
+            "        line = raw.rstrip()",
+            "        m = REQ_HEADER.match(line) or REQ_HEADER_ES.match(line)",
+            "            current = Requirement(id=m.group(1), title=m.group(2).strip() or f\"Requirement {m.group(1)}\")",
+            "            requirements.append(current)",
+            "            continue",
+            "        if current is None:",
+            "            continue",
+            "        m = USER_STORY.search(line)",
+            "        if m:",
+            "            current.user_story = m.group(1).strip()",
+            "        m = CRITERION.match(line)",
+            "        if m:",
+            "            cid = f\"{current.id}.{m.group(1)}\"",
+            "            text = (m.group(2) + m.group(3)).strip()",
+            "            current.criteria.append(AcceptanceCriterion(id=cid, text=text))",
+            "    auto_id = 0",
+            "        m = TASK_LINE.match(raw)",
+            "        auto_id += 1",
+            "        done = m.group(1).lower() == \"x\"",
+            "        task_id = m.group(2) or str(auto_id)",
+            "        text = m.group(3).strip()",
+            "        for lookahead in lines[i + 1 : i + 8]:",
+            "            if TASK_LINE.match(lookahead):",
+            "        tasks.append(SpecTask(id=task_id, text=text, done=done, requirement_refs=refs))"
+          ]
+        }
+      ],
+      "symbols": [
+        "_requirement_bodies",
+        "_parse_body",
+        "parse_requirements"
+      ]
+    },
+    {
+      "path": "tests/fixtures/requirements_criteria_variants.md",
+      "status": "added",
+      "hunks": [
+        {
+          "header": "",
+          "added": [
+            "# Requirements Document",
+            "",
+            "### Requirement 1: Formatos de criterio mixtos",
+            "",
+            "**User Story:** As a user, I want mixed criteria markers, so that all common Kiro formats parse.",
+            "",
+            "Before the criteria section, a decoy list must be ignored:",
+            "- This bullet is outside Acceptance Criteria and must not become a criterion",
+            "- Neither must this one",
+            "",
+            "#### Acceptance Criteria",
+            "",
+            "1.   WHEN extra whitespace surrounds a numbered entry THEN it SHALL still be trimmed",
+            "2) WHEN a criterion uses a closing parenthesis THEN it SHALL be recognized",
+            "- WHEN a criterion uses a dash bullet THEN it SHALL be recognized",
+            "* WHEN a criterion uses an asterisk bullet THEN it SHALL be recognized",
+            "",
+            "##### Notes",
+            "",
+            "This subsection is deeper than the criteria heading, so it stays inside the",
+            "section, but this plain paragraph must not become a criterion.",
+            "",
+            "### Requirement 2: Seccion de criterios cerrada por subtitulo",
+            "",
+            "**User Story:** As a user, I want a shallower heading to close the section, so that trailing content is not miscounted.",
+            "",
+            "#### Acceptance Criteria",
+            "",
+            "1. WHEN this criterion is parsed THEN it SHALL be the only one recorded",
+            "",
+            "#### Out of criteria now",
+            "",
+            "- This bullet lives after the criteria section closed and must not be counted"
+          ],
+          "removed": []
+        }
+      ],
+      "symbols": []
+    },
+    {
+      "path": "tests/fixtures/requirements_heading_variants.md",
+      "status": "added",
+      "hunks": [
+        {
+          "header": "",
+          "added": [
+            "# Requirements Document",
+            "",
+            "## Introduction",
+            "",
+            "Fixture: heading recognition variants (levels, language, colon, missing title, decoys).",
+            "",
+            "## Requisito 1: Encabezado nivel dos con dos puntos",
+            "",
+            "**User Story:** As a user, I want a level-two Spanish header with a colon, so that it is recognized.",
+            "",
+            "#### Acceptance Criteria",
+            "",
+            "1. WHEN this fixture is parsed THEN the parser SHALL recognize this header",
+            "",
+            "### Not a requirement heading",
+            "",
+            "This decoy heading and paragraph must stay inside Requirement 1 and must not",
+            "start a new requirement or leak a criterion into it.",
+            "",
+            "### Requirement 2 Titulo sin dos puntos",
+            "",
+            "**User Story:** As a user, I want a level-three English header without a colon, so that it still parses.",
+            "",
+            "#### Acceptance Criteria",
+            "",
+            "1. WHEN this fixture is parsed THEN the parser SHALL recognize a header without a colon",
+            "",
+            "#### Requirement 3",
+            "",
+            "No title was given after the id on purpose.",
+            "",
+            "##### Acceptance Criteria",
+            "",
+            "1. WHEN a requirement heading has no title THEN the parser SHALL fall back to a default title"
+          ],
+          "removed": []
+        }
+      ],
+      "symbols": []
+    },
+    {
+      "path": "tests/fixtures/requirements_stories_empty_sections.md",
+      "status": "added",
+      "hunks": [
+        {
+          "header": "",
+          "added": [
+            "# Requirements Document",
+            "",
+            "### Requirement 1: Historia en espanol",
+            "",
+            "**Historia de Usuario:** Como usuario, quiero que la etiqueta en espanol funcione, para confiar en el parser.",
+            "",
+            "#### Acceptance Criteria",
+            "",
+            "1. WHEN a Spanish user story label is present THEN the parser SHALL extract it",
+            "",
+            "### Requirement 2: Seccion de criterios vacia",
+            "",
+            "**User Story:** As a user, I want an empty criteria section to be harmless, so that later requirements still parse.",
+            "",
+            "#### Acceptance Criteria",
+            "",
+            "### Requirement 3: Sin seccion de criterios",
+            "",
+            "**User Story:** As a user, I want a missing criteria section to be harmless too, so that continuity is preserved.",
+            "",
+            "Some prose with no Acceptance Criteria heading at all.",
+            "",
+            "### Requirement 4: Requisito poblado tras los vacios",
+            "",
+            "**User Story:** As a user, I want a populated requirement after empty ones, so that continuity is verified end to end.",
+            "",
+            "#### Acceptance Criteria",
+            "",
+            "1. WHEN prior requirements had no criteria THEN this requirement SHALL still parse correctly",
+            "2. WHEN this is the last requirement THEN its criteria SHALL be complete"
+          ],
+          "removed": []
+        }
+      ],
+      "symbols": []
+    },
+    {
+      "path": "tests/fixtures/tasks_nested_ids_states.md",
+      "status": "added",
+      "hunks": [
+        {
+          "header": "",
+          "added": [
+            "# Implementation Plan",
+            "",
+            "- [x] 8. Harden spec parser against real-world Kiro spec variations",
+            "  - _Requirements: 1.1, 1.2_",
+            "",
+            "- [X] 8.1 Uppercase completion marker",
+            "  - _Requirements: 1.3_",
+            "",
+            "- [ ] 8.1.2.3 Deeply nested identifier, not yet done",
+            "  - _Requirements: 1.6_",
+            "",
+            "- [?] 8.2 Invalid checkbox marker must be ignored entirely",
+            "  - _Requirements: 1.7_",
+            "",
+            "- [ ] not-a-number Task without a leading numeric id must be ignored",
+            "  - _Requirements: 1.8_",
+            "",
+            "- [x] 9. Final task to confirm parsing continues after invalid lines",
+            "  - _Requirements: 2.1, 2.2_"
+          ],
+          "removed": []
+        }
+      ],
+      "symbols": []
+    },
+    {
+      "path": "tests/test_engine.py",
+      "status": "modified",
+      "hunks": [
+        {
+          "header": "def test_phantom_task_detected():",
+          "added": [
+            "",
+            "",
+            "def test_untested_criterion_not_masked_by_unrelated_test_file():",
+            "    reqs = [_req(\"1\", \"Parse spec files\", \"As a dev I want to parse requirements\")]",
+            "    changes = [",
+            "        FileChange(",
+            "            path=\"src/parser.py\",",
+            "            symbols=[\"parse_requirements\"],",
+            "            hunks=[Hunk(header=\"\", added=[\"def parse_requirements(path):\"])],",
+            "        ),",
+            "        FileChange(",
+            "            path=\"tests/test_unrelated_thing.py\",",
+            "            symbols=[\"test_something_else\"],",
+            "            hunks=[Hunk(header=\"\", added=[\"def test_something_else():\", \"    assert unrelated_module.compute() == 1\"])],",
+            "        ),",
+            "    ]",
+            "    report = run_heuristic_audit(\"demo\", \"HEAD~1\", reqs, [], changes)",
+            "    finding = next(f for f in report.findings if f.subject_id == \"1\")",
+            "    assert finding.verdict == Verdict.UNTESTED_CRITERION"
+          ],
+          "removed": []
+        }
+      ],
+      "symbols": [
+        "test_untested_criterion_not_masked_by_unrelated_test_file"
+      ]
+    },
+    {
+      "path": "tests/test_integration_self_audit.py",
+      "status": "added",
+      "hunks": [
+        {
+          "header": "",
+          "added": [
+            "import json",
+            "",
+            "from click.testing import CliRunner",
+            "",
+            "from specguard.cli import main",
+            "",
+            "EMPTY_TREE = \"4b825dc642cb6eb9a060e54bf8d69288fbee4904\"",
+            "",
+            "",
+            "def test_specguard_audits_its_own_repository(tmp_path):",
+            "    output_dir = tmp_path / \"reports\"",
+            "    result = CliRunner().invoke(",
+            "        main,",
+            "        [",
+            "            \"audit\",",
+            "            \"--spec\", \".kiro/specs/specguard-core\",",
+            "            \"--diff\", EMPTY_TREE,",
+            "            \"--output\", str(output_dir),",
+            "        ],",
+            "    )",
+            "    assert result.exit_code == 0, result.output",
+            "    assert (output_dir / \"report.json\").exists()",
+            "    assert (output_dir / \"report.md\").exists()",
+            "",
+            "    report = json.loads((output_dir / \"report.json\").read_text(encoding=\"utf-8\"))",
+            "    assert report[\"requirements\"]",
+            "",
+            "    phantom_tasks = [f for f in report[\"findings\"] if f[\"verdict\"] == \"phantom_task\"]",
+            "    assert phantom_tasks == [], f\"Self-audit found phantom tasks: {phantom_tasks}\"",
+            "",
+            "    uncovered = [f for f in report[\"findings\"] if f[\"verdict\"] == \"uncovered_requirement\"]",
+            "    assert uncovered == [], f\"Self-audit found uncovered requirements: {uncovered}\""
+          ],
+          "removed": []
+        }
+      ],
+      "symbols": [
+        "test_specguard_audits_its_own_repository"
+      ]
+    },
+    {
+      "path": "tests/test_spec_parser.py",
+      "status": "modified",
+      "hunks": [
+        {
+          "header": "",
+          "added": [
+            "from specguard.parsers.kiro_spec import load_spec, parse_requirements, parse_tasks"
+          ],
+          "removed": [
+            "from specguard.parsers.kiro_spec import parse_requirements, parse_tasks"
+          ]
+        },
+        {
+          "header": "def test_parse_tasks():",
+          "added": [
+            "",
+            "",
+            "def test_heading_variants_recognized_in_order_with_fallback_title():",
+            "    reqs = parse_requirements(FIXTURES / \"requirements_heading_variants.md\")",
+            "    assert [r.id for r in reqs] == [\"1\", \"2\", \"3\"]",
+            "    assert reqs[0].title == \"Encabezado nivel dos con dos puntos\"",
+            "    assert reqs[1].title == \"Titulo sin dos puntos\"",
+            "    assert reqs[2].title == \"Requirement 3\"",
+            "    assert [len(r.criteria) for r in reqs] == [1, 1, 1]",
+            "",
+            "",
+            "def test_criteria_variants_confined_to_section():",
+            "    reqs = parse_requirements(FIXTURES / \"requirements_criteria_variants.md\")",
+            "    req1, req2 = reqs",
+            "    assert [c.id for c in req1.criteria] == [\"1.1\", \"1.2\", \"1.3\", \"1.4\"]",
+            "    assert req1.criteria[0].text.startswith(\"WHEN extra whitespace\")",
+            "    assert req1.criteria[2].text.startswith(\"WHEN a criterion uses a dash\")",
+            "    assert len(req2.criteria) == 1",
+            "    assert req2.criteria[0].id == \"2.1\"",
+            "",
+            "",
+            "def test_bilingual_story_and_empty_or_missing_sections_dont_break_continuity():",
+            "    reqs = parse_requirements(FIXTURES / \"requirements_stories_empty_sections.md\")",
+            "    assert reqs[0].user_story.startswith(\"Como usuario\")",
+            "    assert reqs[1].criteria == []",
+            "    assert reqs[2].criteria == []",
+            "    assert len(reqs[3].criteria) == 2",
+            "    assert reqs[3].criteria[1].id == \"4.2\"",
+            "",
+            "",
+            "def test_task_nested_ids_and_states_with_invalid_lines_ignored():",
+            "    tasks = parse_tasks(FIXTURES / \"tasks_nested_ids_states.md\")",
+            "    assert [t.id for t in tasks] == [\"8\", \"8.1\", \"8.1.2.3\", \"9\"]",
+            "    assert [t.done for t in tasks] == [True, True, False, True]",
+            "    assert tasks[2].requirement_refs == [\"1.6\"]",
+            "    assert tasks[3].requirement_refs == [\"2.1\", \"2.2\"]",
+            "",
+            "",
+            "def test_load_spec_returns_empty_lists_for_missing_files(tmp_path):",
+            "    reqs, tasks = load_spec(tmp_path)",
+            "    assert reqs == []",
+            "    assert tasks == []",
+            "",
+            "",
+            "def test_public_api_smoke():",
+            "    reqs = parse_requirements(FIXTURES / \"requirements.md\")",
+            "    tasks = parse_tasks(FIXTURES / \"tasks.md\")",
+            "    loaded_reqs, loaded_tasks = load_spec(FIXTURES)",
+            "    assert loaded_reqs == reqs",
+            "    assert loaded_tasks == tasks",
+            "",
+            "",
+            "def test_heading_level_one_and_five_are_not_recognized(tmp_path):",
+            "    md = tmp_path / \"requirements.md\"",
+            "    md.write_text(",
+            "        \"# Requirement 1: too shallow\\n\\n\"",
+            "        \"##### Requirement 2: too deep\\n\\n\"",
+            "        \"### Requirement 3: just right\\n\\n\"",
+            "        \"#### Acceptance Criteria\\n\\n\"",
+            "        \"1. WHEN parsed THEN it SHALL be the only requirement\\n\",",
+            "        encoding=\"utf-8\",",
+            "    )",
+            "    reqs = parse_requirements(md)",
+            "    assert [r.id for r in reqs] == [\"3\"]",
+            "",
+            "",
+            "def test_unrecognized_bold_label_does_not_set_user_story(tmp_path):",
+            "    md = tmp_path / \"requirements.md\"",
+            "    md.write_text(",
+            "        \"### Requirement 1: unknown label\\n\\n\"",
+            "        \"**Not A Recognized Label:** this must not become the user story\\n\\n\"",
+            "        \"#### Acceptance Criteria\\n\\n\"",
+            "        \"1. WHEN parsed THEN the user story SHALL stay empty\\n\",",
+            "        encoding=\"utf-8\",",
+            "    )",
+            "    reqs = parse_requirements(md)",
+            "    assert reqs[0].user_story == \"\"",
+            "    assert len(reqs[0].criteria) == 1",
+            "",
+            "",
+            "def test_criterion_outside_section_is_not_captured(tmp_path):",
+            "    md = tmp_path / \"requirements.md\"",
+            "    md.write_text(",
+            "        \"### Requirement 1: sin seccion aun\\n\\n\"",
+            "        \"1. WHEN this appears before Acceptance Criteria THEN it SHALL be ignored\\n\\n\"",
+            "        \"#### Acceptance Criteria\\n\\n\"",
+            "        \"1. WHEN this appears inside THEN it SHALL be the only criterion\\n\",",
+            "        encoding=\"utf-8\",",
+            "    )",
+            "    reqs = parse_requirements(md)",
+            "    assert len(reqs[0].criteria) == 1",
+            "    assert reqs[0].criteria[0].text == \"WHEN this appears inside THEN it SHALL be the only criterion\"",
+            "",
+            "",
+            "def test_invalid_checkbox_and_non_numeric_id_are_ignored(tmp_path):",
+            "    md = tmp_path / \"tasks.md\"",
+            "    md.write_text(",
+            "        \"- [?] 1 invalid checkbox marker\\n\"",
+            "        \"- [ ] no-id-here task without a numeric id\\n\"",
+            "        \"- [x] 2. valid task\\n\",",
+            "        encoding=\"utf-8\",",
+            "    )",
+            "    tasks = parse_tasks(md)",
+            "    assert [t.id for t in tasks] == [\"2\"]"
+          ],
+          "removed": []
+        }
+      ],
+      "symbols": [
+        "test_heading_variants_recognized_in_order_with_fallback_title",
+        "test_criteria_variants_confined_to_section",
+        "len",
+        "test_bilingual_story_and_empty_or_missing_sections_dont_break_continuity",
+        "test_task_nested_ids_and_states_with_invalid_lines_ignored",
+        "test_load_spec_returns_empty_lists_for_missing_files",
+        "test_public_api_smoke",
+        "test_heading_level_one_and_five_are_not_recognized",
+        "test_unrecognized_bold_label_does_not_set_user_story",
+        "test_criterion_outside_section_is_not_captured",
+        "test_invalid_checkbox_and_non_numeric_id_are_ignored"
+      ]
+    },
+    {
+      "path": "tests/test_spec_parser_properties.py",
+      "status": "added",
+      "hunks": [
+        {
+          "header": "",
+          "added": [
+            "from hypothesis import HealthCheck, given, settings",
+            "from hypothesis import strategies as st",
+            "",
+            "from specguard.parsers.kiro_spec import parse_requirements, parse_tasks",
+            "",
+            "# Each example overwrites and immediately reads back the same tmp_path file,",
+            "# so reusing it across examples (instead of a fresh dir per example) is safe.",
+            "PROPERTY_SETTINGS = settings(",
+            "    max_examples=100, deadline=None, suppress_health_check=[HealthCheck.function_scoped_fixture]",
+            ")",
+            "",
+            "TEXT_ALPHABET = st.characters(whitelist_categories=(\"Ll\", \"Lu\", \"Nd\"), whitelist_characters=\" _-\")",
+            "SAFE_TEXT = st.text(alphabet=TEXT_ALPHABET, min_size=0, max_size=20).map(lambda s: s.strip())",
+            "NONEMPTY_TEXT = SAFE_TEXT.filter(lambda s: s != \"\")",
+            "",
+            "",
+            "@st.composite",
+            "def requirement_block(draw):",
+            "    level = draw(st.sampled_from([\"##\", \"###\", \"####\"]))",
+            "    lang = draw(st.sampled_from([\"Requirement\", \"Requisito\"]))",
+            "    req_id = draw(st.integers(min_value=1, max_value=9999))",
+            "    title = draw(SAFE_TEXT)",
+            "    has_colon = draw(st.booleans())",
+            "    if title:",
+            "        header = f\"{level} {lang} {req_id}{': ' if has_colon else ' '}{title}\"",
+            "    else:",
+            "        header = f\"{level} {lang} {req_id}\"",
+            "    filler = draw(st.lists(NONEMPTY_TEXT, max_size=3))",
+            "    expected_title = title if title else f\"Requirement {req_id}\"",
+            "    return str(req_id), expected_title, [header, *filler]",
+            "",
+            "",
+            "@given(blocks=st.lists(requirement_block(), min_size=0, max_size=8))",
+            "@PROPERTY_SETTINGS",
+            "def test_property_1_requirement_recognition_order_and_isolation(tmp_path, blocks):",
+            "    # Feature: specguard-core, Property 1: Reconocimiento, orden y aislamiento de requisitos",
+            "    lines = [line for _, _, block_lines in blocks for line in block_lines]",
+            "    md = tmp_path / \"requirements.md\"",
+            "    md.write_text(\"\\n\".join(lines) + \"\\n\", encoding=\"utf-8\")",
+            "    result = parse_requirements(md)",
+            "    assert [r.id for r in result] == [b[0] for b in blocks]",
+            "    assert [r.title for r in result] == [b[1] for b in blocks]",
+            "",
+            "",
+            "@st.composite",
+            "def criterion_line(draw):",
+            "    marker = draw(st.sampled_from([\"1.\", \"2)\", \"-\", \"*\"]))",
+            "    pad = draw(st.sampled_from([\"\", \"  \"]))",
+            "    text = draw(NONEMPTY_TEXT)",
+            "    return f\"{marker}{pad} {text}\", text",
+            "",
+            "",
+            "@st.composite",
+            "def requirement_with_criteria_state(draw):",
+            "    req_id = draw(st.integers(min_value=1, max_value=9999))",
+            "    section_state = draw(st.sampled_from([\"populated\", \"empty\", \"absent\"]))",
+            "    decoys = draw(st.lists(criterion_line(), max_size=2))",
+            "    lines = [f\"### Requirement {req_id}\"] + [line for line, _ in decoys]",
+            "    expected: list[str] = []",
+            "    if section_state in (\"populated\", \"empty\"):",
+            "        lines.append(\"#### Acceptance Criteria\")",
+            "        if section_state == \"populated\":",
+            "            entries = draw(st.lists(criterion_line(), min_size=1, max_size=5))",
+            "            lines.extend(line for line, _ in entries)",
+            "            expected = [text for _, text in entries]",
+            "    return str(req_id), expected, lines",
+            "",
+            "",
+            "@given(reqs=st.lists(requirement_with_criteria_state(), min_size=1, max_size=6))",
+            "@PROPERTY_SETTINGS",
+            "def test_property_2_criteria_confined_to_section(tmp_path, reqs):",
+            "    # Feature: specguard-core, Property 2: Criterios confinados a su seccion",
+            "    lines = [line for _, _, block_lines in reqs for line in block_lines]",
+            "    md = tmp_path / \"requirements.md\"",
+            "    md.write_text(\"\\n\".join(lines) + \"\\n\", encoding=\"utf-8\")",
+            "    result = parse_requirements(md)",
+            "    assert len(result) == len(reqs)",
+            "    for parsed, (req_id, expected, _) in zip(result, reqs):",
+            "        assert parsed.id == req_id",
+            "        assert [c.text for c in parsed.criteria] == expected",
+            "        assert [c.id for c in parsed.criteria] == [f\"{req_id}.{i + 1}\" for i in range(len(expected))]",
+            "",
+            "",
+            "@st.composite",
+            "def story_block(draw):",
+            "    req_id = draw(st.integers(min_value=1, max_value=9999))",
+            "    lines = [f\"### Requirement {req_id}\"]",
+            "    decoy_labels = [\"Not A Label\", \"Nota\", \"Design Note\", \"Etiqueta Falsa\"]",
+            "    for _ in range(draw(st.integers(min_value=0, max_value=2))):",
+            "        label = draw(st.sampled_from(decoy_labels))",
+            "        lines.append(f\"**{label}:** {draw(NONEMPTY_TEXT)}\")",
+            "    label = draw(st.sampled_from([\"User Story\", \"Historia de Usuario\"]))",
+            "    has_colon = draw(st.booleans())",
+            "    story_text = draw(NONEMPTY_TEXT)",
+            "    lines.append(f\"**{label}{':' if has_colon else ''}** {story_text}\")",
+            "    if draw(st.booleans()):",
+            "        label2 = draw(st.sampled_from([\"User Story\", \"Historia de Usuario\"]))",
+            "        lines.append(f\"**{label2}:** {draw(NONEMPTY_TEXT)}\")",
+            "    return str(req_id), story_text, lines",
+            "",
+            "",
+            "@given(bodies=st.lists(story_block(), min_size=1, max_size=5))",
+            "@PROPERTY_SETTINGS",
+            "def test_property_3_bilingual_user_story_extraction(tmp_path, bodies):",
+            "    # Feature: specguard-core, Property 3: Extraccion bilingue de historia de usuario",
+            "    lines = [line for _, _, block_lines in bodies for line in block_lines]",
+            "    md = tmp_path / \"requirements.md\"",
+            "    md.write_text(\"\\n\".join(lines) + \"\\n\", encoding=\"utf-8\")",
+            "    result = parse_requirements(md)",
+            "    assert [r.user_story for r in result] == [expected for _, expected, _ in bodies]",
+            "",
+            "",
+            "@st.composite",
+            "def nested_id(draw):",
+            "    depth = draw(st.integers(min_value=1, max_value=4))",
+            "    segments = draw(st.lists(st.integers(min_value=0, max_value=99), min_size=depth, max_size=depth))",
+            "    return \".\".join(str(s) for s in segments)",
+            "",
+            "",
+            "@st.composite",
+            "def task_block(draw):",
+            "    task_id = draw(nested_id())",
+            "    state = draw(st.sampled_from([\" \", \"x\", \"X\"]))",
+            "    text = draw(NONEMPTY_TEXT)",
+            "    lines = [f\"- [{state}] {task_id}. {text}\"]",
+            "    refs: list[str] = []",
+            "    if draw(st.booleans()):",
+            "        refs = draw(st.lists(nested_id(), min_size=1, max_size=3))",
+            "        lines.append(f\"  - _Requirements: {', '.join(refs)}_\")",
+            "    return task_id, state.lower() == \"x\", refs, lines",
+            "",
+            "",
+            "@given(tasks=st.lists(task_block(), min_size=1, max_size=8))",
+            "@PROPERTY_SETTINGS",
+            "def test_property_4_task_identity_state_and_order(tmp_path, tasks):",
+            "    # Feature: specguard-core, Property 4: Identidad, estado y orden de tareas",
+            "    lines = [line for _, _, _, block_lines in tasks for line in block_lines]",
+            "    md = tmp_path / \"tasks.md\"",
+            "    md.write_text(\"\\n\".join(lines) + \"\\n\", encoding=\"utf-8\")",
+            "    result = parse_tasks(md)",
+            "    assert [t.id for t in result] == [tid for tid, _, _, _ in tasks]",
+            "    assert [t.done for t in result] == [done for _, done, _, _ in tasks]",
+            "    assert [t.requirement_refs for t in result] == [refs for _, _, refs, _ in tasks]"
+          ],
+          "removed": []
+        }
+      ],
+      "symbols": [
+        "requirement_block",
+        "str",
+        "test_property_1_requirement_recognition_order_and_isolation",
+        "criterion_line",
+        "requirement_with_criteria_state",
+        "test_property_2_criteria_confined_to_section",
+        "len",
+        "story_block",
+        "draw",
+        "test_property_3_bilingual_user_story_extraction",
+        "nested_id",
+        "task_block",
+        "test_property_4_task_identity_state_and_order"
+      ]
+    }
+  ],
+  "findings": [
+    {
+      "verdict": "covered",
+      "subject_id": "1",
+      "detail": "Requisito 1 cubierto",
+      "evidence": [
+        ".kiro/specs/specguard-core/design.md",
+        ".kiro/specs/specguard-core/requirements.md",
+        ".kiro/specs/specguard-core/tasks.md",
+        ".kiro/steering/tech.md",
+        "dashboard/index.html",
+        "docs/kiro-workflow.md",
+        "src/specguard/engine/heuristic.py",
+        "src/specguard/parsers/kiro_spec.py",
+        "tests/fixtures/requirements_criteria_variants.md",
+        "tests/fixtures/requirements_heading_variants.md",
+        "tests/fixtures/requirements_stories_empty_sections.md",
+        "tests/fixtures/tasks_nested_ids_states.md",
+        "tests/test_engine.py",
+        "tests/test_integration_self_audit.py",
+        "tests/test_spec_parser.py",
+        "tests/test_spec_parser_properties.py"
+      ],
+      "confidence": 0.6
+    },
+    {
+      "verdict": "covered",
+      "subject_id": "2",
+      "detail": "Requisito 2 cubierto",
+      "evidence": [
+        ".kiro/specs/specguard-core/design.md",
+        ".kiro/specs/specguard-core/requirements.md",
+        ".kiro/specs/specguard-core/tasks.md",
+        "dashboard/index.html",
+        "src/specguard/parsers/kiro_spec.py",
+        "tests/fixtures/requirements_criteria_variants.md",
+        "tests/fixtures/requirements_heading_variants.md",
+        "tests/fixtures/requirements_stories_empty_sections.md",
+        "tests/fixtures/tasks_nested_ids_states.md",
+        "tests/test_engine.py",
+        "tests/test_integration_self_audit.py",
+        "tests/test_spec_parser.py",
+        "tests/test_spec_parser_properties.py"
+      ],
+      "confidence": 0.6
+    },
+    {
+      "verdict": "covered",
+      "subject_id": "3",
+      "detail": "Requisito 3 cubierto",
+      "evidence": [
+        ".kiro/specs/specguard-core/design.md",
+        ".kiro/specs/specguard-core/requirements.md",
+        ".kiro/specs/specguard-core/tasks.md",
+        "dashboard/index.html",
+        "src/specguard/engine/heuristic.py",
+        "src/specguard/parsers/kiro_spec.py",
+        "tests/fixtures/requirements_criteria_variants.md",
+        "tests/fixtures/requirements_heading_variants.md",
+        "tests/fixtures/requirements_stories_empty_sections.md",
+        "tests/fixtures/tasks_nested_ids_states.md",
+        "tests/test_engine.py",
+        "tests/test_integration_self_audit.py",
+        "tests/test_spec_parser.py",
+        "tests/test_spec_parser_properties.py"
+      ],
+      "confidence": 0.6
+    },
+    {
+      "verdict": "covered",
+      "subject_id": "4",
+      "detail": "Requisito 4 cubierto",
+      "evidence": [
+        ".github/workflows/specguard.yml",
+        ".kiro/specs/specguard-core/design.md",
+        ".kiro/specs/specguard-core/requirements.md",
+        ".kiro/specs/specguard-core/tasks.md",
+        "dashboard/index.html",
+        "src/specguard/parsers/kiro_spec.py",
+        "tests/fixtures/requirements_criteria_variants.md",
+        "tests/fixtures/requirements_heading_variants.md",
+        "tests/fixtures/requirements_stories_empty_sections.md",
+        "tests/fixtures/tasks_nested_ids_states.md",
+        "tests/test_engine.py",
+        "tests/test_integration_self_audit.py",
+        "tests/test_spec_parser.py",
+        "tests/test_spec_parser_properties.py"
+      ],
+      "confidence": 0.6
+    },
+    {
+      "verdict": "covered",
+      "subject_id": "5",
+      "detail": "Requisito 5 cubierto",
+      "evidence": [
+        ".github/workflows/specguard.yml",
+        ".kiro/specs/specguard-core/design.md",
+        ".kiro/specs/specguard-core/requirements.md",
+        ".kiro/specs/specguard-core/tasks.md",
+        "dashboard/index.html",
+        "tests/fixtures/requirements_criteria_variants.md",
+        "tests/fixtures/requirements_stories_empty_sections.md",
+        "tests/test_engine.py",
+        "tests/test_integration_self_audit.py",
+        "tests/test_spec_parser.py",
+        "tests/test_spec_parser_properties.py"
+      ],
+      "confidence": 0.6
+    },
+    {
+      "verdict": "covered",
+      "subject_id": "6",
+      "detail": "Requisito 6 cubierto",
+      "evidence": [
+        ".github/workflows/specguard.yml",
+        ".kiro/specs/specguard-core/design.md",
+        ".kiro/specs/specguard-core/requirements.md",
+        ".kiro/specs/specguard-core/tasks.md",
+        "tests/test_engine.py",
+        "tests/test_integration_self_audit.py"
+      ],
+      "confidence": 0.6
+    },
+    {
+      "verdict": "covered",
+      "subject_id": "7",
+      "detail": "Requisito 7 cubierto",
+      "evidence": [
+        ".kiro/specs/specguard-core/design.md",
+        ".kiro/specs/specguard-core/requirements.md",
+        ".kiro/specs/specguard-core/tasks.md",
+        "dashboard/index.html",
+        "src/specguard/parsers/kiro_spec.py",
+        "tests/fixtures/requirements_criteria_variants.md",
+        "tests/fixtures/requirements_heading_variants.md",
+        "tests/fixtures/requirements_stories_empty_sections.md",
+        "tests/test_engine.py",
+        "tests/test_integration_self_audit.py",
+        "tests/test_spec_parser.py",
+        "tests/test_spec_parser_properties.py"
+      ],
+      "confidence": 0.6
+    },
+    {
+      "verdict": "orphan_code",
+      "subject_id": "pyproject.toml",
+      "detail": "Cambios en pyproject.toml sin requisito que los respalde",
+      "evidence": [],
+      "confidence": 0.5
+    }
+  ],
+  "coverage": {
+    "1": [
+      ".kiro/specs/specguard-core/design.md",
+      ".kiro/specs/specguard-core/requirements.md",
+      ".kiro/specs/specguard-core/tasks.md",
+      ".kiro/steering/tech.md",
+      "dashboard/index.html",
+      "docs/kiro-workflow.md",
+      "src/specguard/engine/heuristic.py",
+      "src/specguard/parsers/kiro_spec.py",
+      "tests/fixtures/requirements_criteria_variants.md",
+      "tests/fixtures/requirements_heading_variants.md",
+      "tests/fixtures/requirements_stories_empty_sections.md",
+      "tests/fixtures/tasks_nested_ids_states.md",
+      "tests/test_engine.py",
+      "tests/test_integration_self_audit.py",
+      "tests/test_spec_parser.py",
+      "tests/test_spec_parser_properties.py"
+    ],
+    "2": [
+      ".kiro/specs/specguard-core/design.md",
+      ".kiro/specs/specguard-core/requirements.md",
+      ".kiro/specs/specguard-core/tasks.md",
+      "dashboard/index.html",
+      "src/specguard/parsers/kiro_spec.py",
+      "tests/fixtures/requirements_criteria_variants.md",
+      "tests/fixtures/requirements_heading_variants.md",
+      "tests/fixtures/requirements_stories_empty_sections.md",
+      "tests/fixtures/tasks_nested_ids_states.md",
+      "tests/test_engine.py",
+      "tests/test_integration_self_audit.py",
+      "tests/test_spec_parser.py",
+      "tests/test_spec_parser_properties.py"
+    ],
+    "3": [
+      ".kiro/specs/specguard-core/design.md",
+      ".kiro/specs/specguard-core/requirements.md",
+      ".kiro/specs/specguard-core/tasks.md",
+      "dashboard/index.html",
+      "src/specguard/engine/heuristic.py",
+      "src/specguard/parsers/kiro_spec.py",
+      "tests/fixtures/requirements_criteria_variants.md",
+      "tests/fixtures/requirements_heading_variants.md",
+      "tests/fixtures/requirements_stories_empty_sections.md",
+      "tests/fixtures/tasks_nested_ids_states.md",
+      "tests/test_engine.py",
+      "tests/test_integration_self_audit.py",
+      "tests/test_spec_parser.py",
+      "tests/test_spec_parser_properties.py"
+    ],
+    "4": [
+      ".github/workflows/specguard.yml",
+      ".kiro/specs/specguard-core/design.md",
+      ".kiro/specs/specguard-core/requirements.md",
+      ".kiro/specs/specguard-core/tasks.md",
+      "dashboard/index.html",
+      "src/specguard/parsers/kiro_spec.py",
+      "tests/fixtures/requirements_criteria_variants.md",
+      "tests/fixtures/requirements_heading_variants.md",
+      "tests/fixtures/requirements_stories_empty_sections.md",
+      "tests/fixtures/tasks_nested_ids_states.md",
+      "tests/test_engine.py",
+      "tests/test_integration_self_audit.py",
+      "tests/test_spec_parser.py",
+      "tests/test_spec_parser_properties.py"
+    ],
+    "5": [
+      ".github/workflows/specguard.yml",
+      ".kiro/specs/specguard-core/design.md",
+      ".kiro/specs/specguard-core/requirements.md",
+      ".kiro/specs/specguard-core/tasks.md",
+      "dashboard/index.html",
+      "tests/fixtures/requirements_criteria_variants.md",
+      "tests/fixtures/requirements_stories_empty_sections.md",
+      "tests/test_engine.py",
+      "tests/test_integration_self_audit.py",
+      "tests/test_spec_parser.py",
+      "tests/test_spec_parser_properties.py"
+    ],
+    "6": [
+      ".github/workflows/specguard.yml",
+      ".kiro/specs/specguard-core/design.md",
+      ".kiro/specs/specguard-core/requirements.md",
+      ".kiro/specs/specguard-core/tasks.md",
+      "tests/test_engine.py",
+      "tests/test_integration_self_audit.py"
+    ],
+    "7": [
+      ".kiro/specs/specguard-core/design.md",
+      ".kiro/specs/specguard-core/requirements.md",
+      ".kiro/specs/specguard-core/tasks.md",
+      "dashboard/index.html",
+      "src/specguard/parsers/kiro_spec.py",
+      "tests/fixtures/requirements_criteria_variants.md",
+      "tests/fixtures/requirements_heading_variants.md",
+      "tests/fixtures/requirements_stories_empty_sections.md",
+      "tests/test_engine.py",
+      "tests/test_integration_self_audit.py",
+      "tests/test_spec_parser.py",
+      "tests/test_spec_parser_properties.py"
+    ]
+  },
+  "semantic_used": false,
+  "score": 100.0
+}
