@@ -66,13 +66,22 @@ const LABELS = {
 };
 const COLORS = { covered: "var(--green)", uncovered_requirement: "var(--red)", phantom_task: "var(--red)", orphan_code: "var(--yellow)", untested_criterion: "var(--yellow)" };
 
+function esc(value) {
+  return String(value).replace(/[&<>"']/g, (c) => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
+  }[c]));
+}
+
 async function load() {
   let data;
   try {
     const res = await fetch("report.json");
     data = await res.json();
   } catch (e) {
-    document.getElementById("meta").textContent = "No se encontro report.json junto al dashboard.";
+    const hint = location.protocol === "file:"
+      ? "No se pudo cargar report.json (abriste el archivo directamente: corre 'python -m http.server' en esta carpeta)."
+      : "No se encontro report.json junto al dashboard.";
+    document.getElementById("meta").textContent = hint;
     return;
   }
   document.getElementById("meta").textContent = `spec: ${data.spec_name} | diff: ${data.diff_ref} | semantico: ${data.semantic_used ? "si" : "no"}`;
@@ -86,8 +95,8 @@ async function load() {
     const cls = files.length ? "covered" : "uncovered_requirement";
     const tr = document.createElement("tr");
     tr.innerHTML = `<td><span class="dot ${cls}"></span></td>` +
-      `<td><b>${req.id}</b> ${req.title}</td>` +
-      `<td class="files">${files.length ? files.join("<br>") : "(ninguno)"}</td>`;
+      `<td><b>${esc(req.id)}</b> ${esc(req.title)}</td>` +
+      `<td class="files">${files.length ? files.map(esc).join("<br>") : "(ninguno)"}</td>`;
     tbody.appendChild(tr);
   }
 
@@ -99,8 +108,8 @@ async function load() {
     const div = document.createElement("div");
     div.className = "finding";
     div.innerHTML = `<span class="v" style="color:${COLORS[f.verdict]}">` +
-      `<span class="dot ${f.verdict}"></span>${LABELS[f.verdict] || f.verdict}</span> ` +
-      `<b>${f.subject_id}</b><div class="d">${f.detail}</div>`;
+      `<span class="dot ${f.verdict}"></span>${esc(LABELS[f.verdict] || f.verdict)}</span> ` +
+      `<b>${esc(f.subject_id)}</b><div class="d">${esc(f.detail)}</div>`;
     cont.appendChild(div);
   }
 }
