@@ -44,10 +44,15 @@ Regla del equipo: ninguna feature del motor entra sin pasar por el spec.
 
 ## Presupuesto de creditos (2000 por integrante)
 
-Las sesiones spec cuestan aproximadamente 5x lo que una sesion vibe. Estrategia:
+Actualizacion verificada 2026-07-24: el multiplicador "5x vibe vs spec" que se asumia aqui ya no
+es como Kiro factura. Desde el cambio a precios "Auto" (sept. 2025), todo el consumo sale de un
+solo pool de creditos tasado por complejidad de tarea y uso de tokens, no por si la sesion es vibe
+o spec. El unico multiplicador oficial vigente es el de modelo: Sonnet 4.6 cuesta 1.3x lo que Auto
+para la misma tarea (ver `.kiro/steering/tech.md`). Estrategia actualizada:
 
-1. Explorar y prototipar en vibe con Auto (barato).
-2. Ejecutar las tareas del spec en modo spec, en pasos pequenos y acotados.
+1. Usar Auto por defecto para casi todo; es la palanca de ahorro real hoy, no el modo de sesion.
+2. Reservar Sonnet 4.6 para las tareas de diseno/arquitectura donde Auto se quede corto (tarea 8
+   ya se beneficio de esto).
 3. Reservar un margen minimo del 15% para la recta final (video, fixes de demo).
 
 ## Reglas de prompting del equipo
