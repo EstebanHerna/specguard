@@ -29,3 +29,22 @@ def test_phantom_task_detected():
 def test_score_zero_without_requirements():
     report = run_heuristic_audit("demo", "HEAD~1", [], [], [])
     assert report.score == 0.0
+
+
+def test_untested_criterion_not_masked_by_unrelated_test_file():
+    reqs = [_req("1", "Parse spec files", "As a dev I want to parse requirements")]
+    changes = [
+        FileChange(
+            path="src/parser.py",
+            symbols=["parse_requirements"],
+            hunks=[Hunk(header="", added=["def parse_requirements(path):"])],
+        ),
+        FileChange(
+            path="tests/test_unrelated_thing.py",
+            symbols=["test_something_else"],
+            hunks=[Hunk(header="", added=["def test_something_else():", "    assert unrelated_module.compute() == 1"])],
+        ),
+    ]
+    report = run_heuristic_audit("demo", "HEAD~1", reqs, [], changes)
+    finding = next(f for f in report.findings if f.subject_id == "1")
+    assert finding.verdict == Verdict.UNTESTED_CRITERION
