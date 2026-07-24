@@ -27,7 +27,8 @@ jobs:
           specguard audit \
             --spec .kiro/specs/specguard-core \
             --diff "origin/${{ github.base_ref }}...HEAD" \
-            --output reports || true
+            --output reports \
+            --fail-under 70
       - name: Comment PR
         if: always()
         uses: marocchino/sticky-pull-request-comment@v2
