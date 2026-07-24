@@ -63,7 +63,7 @@ This plan preserves the existing SpecGuard implementation sequence while hardeni
 - [ ] 12. Deploy dashboard to S3 + CloudFront and engine to Lambda
   - _Requirements: 7.3_
 
-- [ ] 13. Integration test: SpecGuard auditing its own repository
+- [x] 13. Integration test: SpecGuard auditing its own repository
   - _Requirements: 3.6, 5.1_
 
 ## Task Dependency Graph
