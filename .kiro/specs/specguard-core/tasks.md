@@ -37,7 +37,7 @@ This plan preserves the existing SpecGuard implementation sequence while hardeni
 - [x] 7. Implement CLI with audit command and fail-under gate
   - _Requirements: 5.2, 5.3_
 
-- [ ] 8. Harden spec parser against real-world Kiro spec variations
+- [x] 8. Harden spec parser against real-world Kiro spec variations
   - Parse `##` through `####` English `Requirement N` and Spanish `Requisito N` headings with or without colons, preserving document order and requirement-body boundaries
   - Parse numbered (`.` or `)`), `-`, and `*` acceptance-criteria entries in document order, both bold user-story labels, and empty or missing acceptance-criteria sections without interrupting later requirements
   - Parse complete arbitrary-depth dot-separated numeric task identifiers and map blank, `x`, and `X` checkbox states while preserving task document order
