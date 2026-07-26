@@ -12,6 +12,7 @@ from specguard.engine.heuristic import run_heuristic_audit
 from specguard.models import Verdict
 from specguard.parsers.git_diff import collect_changes
 from specguard.parsers.kiro_spec import load_spec
+from specguard.report.badge import write_badge
 from specguard.report.json_report import write_json
 from specguard.report.markdown_report import write_markdown
 
@@ -35,7 +36,11 @@ def main() -> None:
               show_default=True, help="Directorio de salida")
 @click.option("--fail-under", type=float, default=None,
               help="Codigo de salida 1 si el score queda debajo de este umbral")
-def audit(spec_dir: Path, diff_ref: str, semantic: bool, output: Path, fail_under: float | None) -> None:
+@click.option("--badge/--no-badge", default=False, show_default=True,
+              help="Emitir badge.svg con el score de trazabilidad")
+def audit(
+    spec_dir: Path, diff_ref: str, semantic: bool, output: Path, fail_under: float | None, badge: bool
+) -> None:
     """Ejecuta la auditoria de trazabilidad spec vs diff."""
     requirements, tasks = load_spec(spec_dir)
     if not requirements:
@@ -57,6 +62,11 @@ def audit(spec_dir: Path, diff_ref: str, semantic: bool, output: Path, fail_unde
 
     write_json(report, output / "report.json")
     write_markdown(report, output / "report.md")
+    if badge:
+        try:
+            write_badge(report, output / "badge.svg")
+        except OSError as exc:
+            console.print(f"[yellow]No se pudo escribir badge.svg: {exc}[/yellow]")
 
     table = Table(title=f"SpecGuard - {spec_dir.name} vs {diff_ref}")
     table.add_column("Veredicto")

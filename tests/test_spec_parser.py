@@ -27,7 +27,8 @@ def test_real_kiro_generated_spec_parses_without_loss():
     assert "\n" not in requirements[0].user_story
 
     assert [t.id for t in tasks] == ["1", "2", "2.1", "2.2", "3"]
-    assert all(t.done is False for t in tasks)
+    # Originally all [ ] as a parser fixture; now genuinely implemented (badge.py).
+    assert all(t.done is True for t in tasks)
     assert tasks[2].requirement_refs == ["2.1", "2.2"]
 
 
