@@ -94,3 +94,7 @@ This plan preserves the existing SpecGuard implementation sequence while hardeni
 - Task 12 is intentionally left partially unchecked: the AWS deployment half
   requires credentials this environment does not have. See the task note and
   infra/README.md.
+- Task 8 validated against a real Kiro-generated spec on 2026-07-26
+  (`.kiro/specs/kiro-format-check/`). Surfaced and fixed a hard-wrapped
+  user-story limitation; see docs/kiro-workflow.md and
+  `test_real_kiro_generated_spec_parses_without_loss`.
