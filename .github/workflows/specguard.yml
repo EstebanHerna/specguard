@@ -23,10 +23,12 @@ jobs:
       - name: Tests
         run: pytest
       - name: Audit traceability
+        env:
+          BASE_REF: ${{ github.base_ref }}
         run: |
           specguard audit \
             --spec .kiro/specs/specguard-core \
-            --diff "origin/${{ github.base_ref }}...HEAD" \
+            --diff "origin/${BASE_REF}...HEAD" \
             --output reports \
             --fail-under 70
       - name: Comment PR
