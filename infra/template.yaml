@@ -1,0 +1,63 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  SpecGuard remote audit engine (Fase 2): Lambda + API Gateway + DynamoDB.
+  Lets a caller POST a spec (requirements.md/tasks.md content) and a diff and
+  get back a traceability report, without installing the CLI. Deploy with:
+  sam build && sam deploy --guided
+
+Globals:
+  Function:
+    Timeout: 30
+    MemorySize: 256
+    Runtime: python3.12
+
+Resources:
+  ReportsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub "${AWS::StackName}-reports"
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: report_id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: report_id
+          KeyType: HASH
+      TimeToLiveSpecification:
+        AttributeName: expires_at
+        Enabled: true
+
+  AuditApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: prod
+      ThrottleSettings:
+        RateLimit: 5
+        BurstLimit: 10
+
+  AuditFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ../
+      Handler: infra.lambda_handler.handler
+      Environment:
+        Variables:
+          SPECGUARD_REPORTS_TABLE: !Ref ReportsTable
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref ReportsTable
+      Events:
+        Audit:
+          Type: Api
+          Properties:
+            RestApiId: !Ref AuditApi
+            Path: /audit
+            Method: post
+
+Outputs:
+  AuditApiUrl:
+    Description: POST endpoint for SpecGuard remote audits
+    Value: !Sub "https://${AuditApi}.execute-api.${AWS::Region}.amazonaws.com/prod/audit"
+  ReportsTableName:
+    Value: !Ref ReportsTable

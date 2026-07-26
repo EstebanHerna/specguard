@@ -1,0 +1,13 @@
+.git/
+.github/
+.kiro/
+.hypothesis/
+.pytest_cache/
+.ruff_cache/
+.aws-sam/
+dashboard/
+docs/
+tests/
+reports/
+gh_pages_build/
+*.egg-info/
