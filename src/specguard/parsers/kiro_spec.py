@@ -20,6 +20,7 @@ USER_STORY = re.compile(
     r"^[ \t]*\*\*(?:User Story|Historia de Usuario):?\*\*[ \t]*(?P<text>.*?)\s*$",
     re.IGNORECASE,
 )
+BOLD_LABEL = re.compile(r"^[ \t]*\*\*[^*]+\*\*")
 TASK_LINE = re.compile(
     r"^[ \t]*-[ \t]+\[(?P<state>[ xX])\][ \t]+"
     r"(?P<id>\d+(?:\.\d+)*)(?:\.)?[ \t]+(?P<text>.*?)\s*$"
@@ -40,14 +41,34 @@ def _requirement_bodies(lines: list[str]) -> list[tuple[str, str, list[str]]]:
     return bodies
 
 
+def _collect_user_story(body: list[str], start: int) -> tuple[str, int]:
+    """Join a user-story label line with any hard-wrapped continuation lines.
+
+    Continuation stops at the first blank line, heading, list entry, or a new
+    bold label, so nothing beyond the story itself is ever absorbed.
+    """
+    parts = [USER_STORY.match(body[start].rstrip()).group("text").strip()]
+    j = start + 1
+    while j < len(body):
+        nxt = body[j].rstrip()
+        if not nxt.strip():
+            break
+        if HEADING.match(nxt) or CRITERION_ENTRY.match(nxt) or BOLD_LABEL.match(nxt):
+            break
+        parts.append(nxt.strip())
+        j += 1
+    return " ".join(p for p in parts if p).strip(), j
+
+
 def _parse_body(req_id: str, body: list[str]) -> tuple[str, list[AcceptanceCriterion]]:
     user_story = ""
     criteria: list[AcceptanceCriterion] = []
     in_criteria = False
     criteria_level = 0
     ordinal = 0
-    for raw in body:
-        line = raw.rstrip()
+    i = 0
+    while i < len(body):
+        line = body[i].rstrip()
         h = HEADING.match(line)
         if h:
             level = len(h.group("level"))
@@ -55,12 +76,11 @@ def _parse_body(req_id: str, body: list[str]) -> tuple[str, list[AcceptanceCrite
                 in_criteria, criteria_level = True, level
             elif in_criteria and level <= criteria_level:
                 in_criteria, criteria_level = False, 0
+            i += 1
             continue
-        if not user_story:
-            m = USER_STORY.match(line)
-            if m:
-                user_story = m.group("text").strip()
-                continue
+        if not user_story and USER_STORY.match(line):
+            user_story, i = _collect_user_story(body, i)
+            continue
         if in_criteria:
             m = CRITERION_ENTRY.match(line)
             if m:
@@ -68,6 +88,7 @@ def _parse_body(req_id: str, body: list[str]) -> tuple[str, list[AcceptanceCrite
                 criteria.append(
                     AcceptanceCriterion(id=f"{req_id}.{ordinal}", text=m.group("text").strip())
                 )
+        i += 1
     return user_story, criteria
 
 

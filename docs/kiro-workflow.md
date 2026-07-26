@@ -74,20 +74,29 @@ para la misma tarea (ver `.kiro/steering/tech.md`). Estrategia actualizada:
 El paso 4 es el corazon del proyecto: SpecGuard se audita a si mismo. Si la
 herramienta detecta una tarea fantasma en nuestro propio repo, el commit no sale.
 
-## Pendiente: validar fixtures contra specs reales de Kiro
+## Validado: parser contra un spec real de Kiro (2026-07-26)
 
 Las fixtures de la tarea 8 (`tests/fixtures/requirements_*.md`,
-`tasks_nested_ids_states.md`) fueron escritas a mano para cubrir la gramatica
-descrita en el design doc, no generadas por Kiro. Un agente de codigo sin
-acceso a Kiro (como el que escribio este parser) no puede generarlas de
-verdad - esto requiere abrir Kiro y usarlo. Antes de dar la tarea 8 por
-completamente validada:
+`tasks_nested_ids_states.md`) se escribieron a mano contra la gramatica del
+design doc. Para cerrar esa brecha se genero un spec real con Kiro en
+`.kiro/specs/kiro-format-check/` (feature de prueba: un badge SVG de score) con
+requisitos EARS, criterios, historias de usuario y tareas anidadas reales.
 
-1. En Kiro, crear un spec nuevo para una mini-feature de prueba (`.kiro/specs/kiro-format-check/`)
-   con requisitos, criterios e historias de usuario reales.
-2. Correr `specguard audit` contra ese spec real (o simplemente `parse_requirements`/`parse_tasks`
-   sobre sus `requirements.md`/`tasks.md`) y confirmar que el parser los lee sin perder criterios
-   ni corromper campos - el mismo tipo de bug que ya encontramos una vez en nuestro propio spec.
-3. Si el formato real de Kiro difiere de lo asumido aqui, agregar esa variante como fixture nueva
-   y ajustar el parser.
-4. Borrar el spec de prueba o dejarlo como fixture adicional, segun convenga.
+Resultado de correr el parser contra ese spec real:
+
+- Los dos requisitos, sus 5 + 3 criterios de aceptacion, ambas historias de
+  usuario y las tareas anidadas (`1`, `2`, `2.1`, `2.2`, `3`) con sus
+  referencias se leen sin perdida ni corrupcion de campos.
+- Hallazgo real: una historia de usuario partida en dos lineas por el limite de
+  100 columnas (convencion de este repo, ver `conventions.md`) perdia su
+  continuacion. Se endurecio el parser para reunir las lineas envueltas de la
+  historia de usuario, deteniendose en la primera linea en blanco, encabezado,
+  entrada de lista u otra etiqueta en negrita. Cubierto por
+  `test_real_kiro_generated_spec_parses_without_loss` y por las 4 propiedades de
+  Hypothesis existentes (sin regresion).
+
+El spec de prueba queda en el repo como fixture viva adicional; sus tareas estan
+en `[ ]` (no implementadas) a proposito - no son tareas fantasma porque no se
+declaran completas. Si mas adelante el formato de Kiro cambia, repetir este
+mismo procedimiento: generar un spec nuevo, correr el parser, y agregar la
+variante como fixture si difiere.

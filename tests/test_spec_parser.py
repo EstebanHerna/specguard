@@ -3,6 +3,32 @@ from pathlib import Path
 from specguard.parsers.kiro_spec import load_spec, parse_requirements, parse_tasks
 
 FIXTURES = Path(__file__).parent / "fixtures"
+REPO_ROOT = Path(__file__).resolve().parents[1]
+KIRO_FORMAT_CHECK = REPO_ROOT / ".kiro" / "specs" / "kiro-format-check"
+
+
+def test_real_kiro_generated_spec_parses_without_loss():
+    """Regression guard: a spec authored with Kiro (not a hand-made fixture).
+
+    Validates the parser against genuine Kiro output, including a user story
+    hard-wrapped at 100 columns per this repo's own convention.
+    """
+    requirements, tasks = load_spec(KIRO_FORMAT_CHECK)
+
+    assert [r.id for r in requirements] == ["1", "2"]
+    assert requirements[0].title == "Generacion del badge SVG"
+    assert [c.id for c in requirements[0].criteria] == ["1.1", "1.2", "1.3", "1.4", "1.5"]
+    assert [c.id for c in requirements[1].criteria] == ["2.1", "2.2", "2.3"]
+    # The wrapped user story is rejoined into one string with no line break left in.
+    assert requirements[0].user_story == (
+        "As a maintainer, I want SpecGuard to emit an SVG traceability badge, "
+        "so that the current score is visible directly in the README."
+    )
+    assert "\n" not in requirements[0].user_story
+
+    assert [t.id for t in tasks] == ["1", "2", "2.1", "2.2", "3"]
+    assert all(t.done is False for t in tasks)
+    assert tasks[2].requirement_refs == ["2.1", "2.2"]
 
 
 def test_parse_requirements():
