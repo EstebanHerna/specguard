@@ -73,3 +73,21 @@ para la misma tarea (ver `.kiro/steering/tech.md`). Estrategia actualizada:
 
 El paso 4 es el corazon del proyecto: SpecGuard se audita a si mismo. Si la
 herramienta detecta una tarea fantasma en nuestro propio repo, el commit no sale.
+
+## Pendiente: validar fixtures contra specs reales de Kiro
+
+Las fixtures de la tarea 8 (`tests/fixtures/requirements_*.md`,
+`tasks_nested_ids_states.md`) fueron escritas a mano para cubrir la gramatica
+descrita en el design doc, no generadas por Kiro. Un agente de codigo sin
+acceso a Kiro (como el que escribio este parser) no puede generarlas de
+verdad - esto requiere abrir Kiro y usarlo. Antes de dar la tarea 8 por
+completamente validada:
+
+1. En Kiro, crear un spec nuevo para una mini-feature de prueba (`.kiro/specs/kiro-format-check/`)
+   con requisitos, criterios e historias de usuario reales.
+2. Correr `specguard audit` contra ese spec real (o simplemente `parse_requirements`/`parse_tasks`
+   sobre sus `requirements.md`/`tasks.md`) y confirmar que el parser los lee sin perder criterios
+   ni corromper campos - el mismo tipo de bug que ya encontramos una vez en nuestro propio spec.
+3. Si el formato real de Kiro difiere de lo asumido aqui, agregar esa variante como fixture nueva
+   y ajustar el parser.
+4. Borrar el spec de prueba o dejarlo como fixture adicional, segun convenga.
