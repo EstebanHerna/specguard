@@ -39,6 +39,7 @@ class Hunk:
     header: str
     added: list[str] = field(default_factory=list)
     removed: list[str] = field(default_factory=list)
+    added_lines: list[int] = field(default_factory=list)
 
 
 @dataclass

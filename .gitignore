@@ -7,9 +7,12 @@ dist/
 build/
 .pytest_cache/
 .ruff_cache/
+.hypothesis/
 .coverage
 reports/
 dashboard/report.json
 .env
 .DS_Store
 node_modules/
+.aws-sam/
+samconfig.toml

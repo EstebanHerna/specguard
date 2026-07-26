@@ -22,12 +22,14 @@ git diff    --> | parsers/git_diff    |--+   +--------------------+     +-------
 ## Modulos
 
 - `models.py`: dataclasses del dominio (Requirement, SpecTask, FileChange, Finding, AuditReport) y el enum Verdict.
-- `parsers/kiro_spec.py`: specs de Kiro (EARS + checkboxes) a datos estructurados.
-- `parsers/git_diff.py`: unified diff a FileChange con simbolos extraidos.
+- `parsers/kiro_spec.py`: specs de Kiro (EARS + checkboxes) a datos estructurados via maquina de estados.
+- `parsers/git_diff.py`: unified diff a FileChange, con numero de linea real por linea agregada (`Hunk.added_lines`).
+- `parsers/symbols.py`: simbolos tocados por el diff via tree-sitter (Python/JS/TS/TSX) cuando esta disponible, con fallback automatico a regex si no lo esta o el lenguaje no es soportado.
 - `engine/heuristic.py`: matriz de cobertura por solapamiento de tokens y deteccion de los cinco veredictos.
 - `engine/semantic.py`: refinamiento con Claude via Bedrock converse API, con fallback total.
 - `report/`: serializacion JSON (dashboard) y Markdown (PR, terminal).
 - `cli.py`: comando `specguard audit` con gate `--fail-under` para CI.
+- `infra/`: SAM (Lambda + API Gateway + DynamoDB) para exponer el motor como servicio - ver `infra/README.md`.
 
 ## Los cinco veredictos
 
@@ -42,14 +44,13 @@ git diff    --> | parsers/git_diff    |--+   +--------------------+     +-------
 ## Decisiones
 
 - Heuristica primero, LLM despues: la herramienta da senal util sin credenciales AWS y nunca se cae por un fallo del modelo.
-- Regex sobre tree-sitter en v0.1: cero dependencias nativas; tree-sitter queda como tarea 9 del spec.
-- Dashboard estatico sin backend: report.json es el contrato; el despliegue es un bucket S3.
+- tree-sitter como mejora, regex como piso: `parsers/git_diff.py` siempre extrae simbolos por regex primero (cero dependencias, funciona siempre); `collect_changes` intenta luego refinar con tree-sitter (extra `treesitter`) leyendo el archivo real del working tree y cruzando rangos de linea de cada definicion contra las lineas agregadas del diff. Si tree-sitter no esta instalado, el lenguaje no es soportado, o el archivo no se puede leer (por ejemplo borrado), se conserva el resultado de regex sin error.
+- Dashboard estatico sin backend: report.json es el contrato. La demo del hackathon se sirve en GitHub Pages (rama `gh-pages`) en vez de S3+CloudFront, por el riesgo de que una cuenta AWS nueva reciba el "Free Plan" de 6 meses con auto-suspension (cambio de free tier de julio 2025) en vez del free tier clasico - GitHub Pages no depende de eso para sobrevivir la ventana de evaluacion.
 
-## Infraestructura objetivo (AWS)
+## Infraestructura AWS (Fase 2 - codigo listo, no desplegada)
 
-- S3 + CloudFront: dashboard estatico.
-- Lambda + API Gateway: ejecucion del motor para repos remotos (fase 2).
-- DynamoDB: historico de reportes por repo/PR (fase 2).
-- Bedrock: capa semantica.
+- `infra/template.yaml` (SAM): Lambda + API Gateway + DynamoDB, listos para `sam build && sam deploy --guided`. Ver `infra/README.md` para prerequisitos, limitaciones de seguridad conocidas (sin autenticacion, mitigado con throttling) y como probarlo.
+- Bedrock: capa semantica opcional (`engine/semantic.py`), ya integrada en el CLI via `--semantic`.
+- S3 + CloudFront: se evaluo para el dashboard estatico pero se prefirio GitHub Pages para la demo real (ver decision arriba); queda como alternativa documentada, no como plan activo.
 
-Todo dentro de la capa gratuita para sobrevivir la ventana de evaluacion de 7 dias.
+Todo pensado para caber en la capa gratuita, pero sin probar contra una cuenta AWS real en este entorno de desarrollo.

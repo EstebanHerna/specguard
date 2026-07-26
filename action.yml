@@ -20,13 +20,19 @@ runs:
   steps:
     - name: Install SpecGuard
       shell: bash
-      run: pip install ${{ github.action_path }}
+      env:
+        ACTION_PATH: ${{ github.action_path }}
+      run: pip install "$ACTION_PATH"
     - name: Run audit
       shell: bash
+      env:
+        SPEC_DIR: ${{ inputs.spec-dir }}
+        BASE_REF: ${{ inputs.base-ref }}
+        FAIL_UNDER: ${{ inputs.fail-under }}
       run: |
-        git fetch origin ${GITHUB_BASE_REF:-main} --depth=50 || true
+        git fetch origin "${GITHUB_BASE_REF:-main}" --depth=50 || true
         specguard audit \
-          --spec "${{ inputs.spec-dir }}" \
-          --diff "${{ inputs.base-ref }}...HEAD" \
+          --spec "$SPEC_DIR" \
+          --diff "${BASE_REF}...HEAD" \
           --output reports \
-          --fail-under "${{ inputs.fail-under }}"
+          --fail-under "$FAIL_UNDER"

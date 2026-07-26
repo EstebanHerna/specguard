@@ -32,9 +32,15 @@ heuristico se entrega igual.
 ## Instalacion
 
 ```bash
-pip install -e ".[dev]"           # nucleo + tests
-pip install -e ".[dev,semantic]"  # + capa Bedrock
+pip install -e ".[dev]"              # nucleo + tests + tree-sitter
+pip install -e ".[dev,semantic]"     # + capa Bedrock
 ```
+
+Extraccion de simbolos: por defecto usa regex; si `tree-sitter` (extra
+`treesitter`, incluido en `dev`) esta instalado, `collect_changes` la refina
+automaticamente para Python/JS/TS/TSX cruzando el rango de lineas de cada
+funcion/clase contra las lineas realmente agregadas por el diff. Sin
+tree-sitter o para otros lenguajes, sigue funcionando por regex sin error.
 
 ## Uso
 
@@ -53,7 +59,8 @@ specguard audit --spec .kiro/specs/specguard-core --diff HEAD~1 -o dashboard
 python -m http.server -d dashboard 8080
 ```
 
-Estatico, sin backend: desplegable tal cual a S3 + CloudFront.
+Estatico, sin backend. Demo en vivo: [estebanherna.github.io/specguard](https://estebanherna.github.io/specguard/)
+(GitHub Pages, rama `gh-pages`). Tambien desplegable tal cual a S3 + CloudFront.
 
 ### GitHub Action
 
@@ -70,8 +77,15 @@ metodologia de trabajo con Kiro esta documentada en `docs/kiro-workflow.md`.
 
 ## Arquitectura
 
-Ver `docs/architecture.md`. Resumen: parsers (spec y diff) -> motor heuristico
--> refinamiento Bedrock opcional -> reportes JSON/Markdown -> CLI, CI y dashboard.
+Ver `docs/architecture.md`. Resumen: parsers (spec y diff, con simbolos via
+tree-sitter cuando esta disponible) -> motor heuristico -> refinamiento
+Bedrock opcional -> reportes JSON/Markdown -> CLI, CI y dashboard.
+
+### Motor como servicio (AWS, Fase 2)
+
+`infra/` tiene una plantilla SAM (Lambda + API Gateway + DynamoDB) lista para
+desplegar con `sam build && sam deploy --guided` - ver `infra/README.md`.
+No desplegada todavia: requiere una cuenta AWS con credenciales propias.
 
 ## Tests
 
