@@ -17,7 +17,7 @@ dependencies = [
 
 [project.optional-dependencies]
 semantic = ["boto3>=1.34"]
-dev = ["pytest>=8.0", "ruff>=0.4"]
+dev = ["pytest>=8.0", "ruff>=0.4", "hypothesis==6.161.2"]
 
 [project.scripts]
 specguard = "specguard.cli:main"

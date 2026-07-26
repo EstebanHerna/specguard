@@ -98,7 +98,7 @@ def detect_findings(
                     confidence=0.7,
                 )
             )
-        elif not any(p in test_paths for p in coverage[req.id]) and not test_paths:
+        elif not any(p in test_paths for p in coverage[req.id]):
             findings.append(
                 Finding(
                     verdict=Verdict.UNTESTED_CRITERION,
