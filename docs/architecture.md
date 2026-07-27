@@ -47,10 +47,10 @@ git diff    --> | parsers/git_diff    |--+   +--------------------+     +-------
 - tree-sitter como mejora, regex como piso: `parsers/git_diff.py` siempre extrae simbolos por regex primero (cero dependencias, funciona siempre); `collect_changes` intenta luego refinar con tree-sitter (extra `treesitter`) leyendo el archivo real del working tree y cruzando rangos de linea de cada definicion contra las lineas agregadas del diff. Si tree-sitter no esta instalado, el lenguaje no es soportado, o el archivo no se puede leer (por ejemplo borrado), se conserva el resultado de regex sin error.
 - Dashboard estatico sin backend: report.json es el contrato. La demo del hackathon se sirve en GitHub Pages (rama `gh-pages`) en vez de S3+CloudFront, por el riesgo de que una cuenta AWS nueva reciba el "Free Plan" de 6 meses con auto-suspension (cambio de free tier de julio 2025) en vez del free tier clasico - GitHub Pages no depende de eso para sobrevivir la ventana de evaluacion.
 
-## Infraestructura AWS (Fase 2 - codigo listo, no desplegada)
+## Infraestructura AWS (Fase 2 - desplegada y probada, 2026-07-26)
 
-- `infra/template.yaml` (SAM): Lambda + API Gateway + DynamoDB, listos para `sam build && sam deploy --guided`. Ver `infra/README.md` para prerequisitos, limitaciones de seguridad conocidas (sin autenticacion, mitigado con throttling) y como probarlo.
+- `infra/template.yaml` (SAM): Lambda + API Gateway (REGIONAL) + DynamoDB, desplegado como stack `specguard-audit` en us-east-1. Endpoint real: `https://ble6qlnav0.execute-api.us-east-1.amazonaws.com/prod/audit`, probado de punta a punta (200 OK + persistencia en DynamoDB con TTL de 7 dias). Ver `infra/README.md` para prerequisitos, dos bugs reales encontrados al desplegar (MethodSettings, endpoint EDGE vs REGIONAL), limitaciones de seguridad conocidas (sin autenticacion, mitigado con throttling) y como reproducirlo.
 - Bedrock: capa semantica opcional (`engine/semantic.py`), ya integrada en el CLI via `--semantic`.
 - S3 + CloudFront: se evaluo para el dashboard estatico pero se prefirio GitHub Pages para la demo real (ver decision arriba); queda como alternativa documentada, no como plan activo.
 
-Todo pensado para caber en la capa gratuita, pero sin probar contra una cuenta AWS real en este entorno de desarrollo.
+Todo pensado para caber en la capa gratuita.

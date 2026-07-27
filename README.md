@@ -87,9 +87,10 @@ Bedrock opcional -> reportes JSON/Markdown -> CLI, CI y dashboard.
 
 ### Motor como servicio (AWS, Fase 2)
 
-`infra/` tiene una plantilla SAM (Lambda + API Gateway + DynamoDB) lista para
-desplegar con `sam build && sam deploy --guided` - ver `infra/README.md`.
-No desplegada todavia: requiere una cuenta AWS con credenciales propias.
+`infra/` tiene una plantilla SAM (Lambda + API Gateway + DynamoDB), desplegada
+y probada en una cuenta real: `https://ble6qlnav0.execute-api.us-east-1.amazonaws.com/prod/audit`
+responde 200 con el reporte completo y lo persiste en DynamoDB (TTL 7 dias).
+Reproducible con `sam build && sam deploy --guided` - ver `infra/README.md`.
 
 ## Tests
 

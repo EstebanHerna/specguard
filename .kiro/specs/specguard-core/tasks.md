@@ -63,9 +63,9 @@ This plan preserves the existing SpecGuard implementation sequence while hardeni
   - [x] 11.2 Findings list grouped by verdict
     - _Requirements: 7.2_
 
-- [ ] 12. Deploy dashboard to S3 + CloudFront and engine to Lambda
+- [x] 12. Deploy dashboard to S3 + CloudFront and engine to Lambda
   - Dashboard: deployed to GitHub Pages instead (gh-pages branch), not S3+CloudFront - see docs/architecture.md for why
-  - Lambda + API Gateway + DynamoDB: infra/template.yaml (SAM) and infra/lambda_handler.py are written and reuse the existing engine directly, but `sam deploy` has NOT been run - this environment has no AWS CLI or credentials configured. Left unchecked deliberately: the tool that flags phantom tasks should not have one of its own.
+  - Lambda + API Gateway + DynamoDB: deployed for real 2026-07-26 (stack `specguard-audit`, us-east-1) once AWS credentials became available. Verified end to end: POST to the live endpoint returns 200 with a full report, persisted in DynamoDB with its 7-day TTL. Two real bugs found only by actually deploying (invalid ThrottleSettings property, EDGE endpoint returning 403 via CloudFront) are documented in infra/README.md.
   - _Requirements: 7.3_
 
 - [x] 13. Integration test: SpecGuard auditing its own repository

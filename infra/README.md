@@ -5,11 +5,26 @@ auditoria como una API HTTP, sin depender de que quien la llama tenga
 `specguard` instalado. Reusa directamente `src/specguard/*` - el handler no
 duplica ninguna logica, solo orquesta.
 
-**Nota honesta:** este directorio contiene la infraestructura como codigo
-lista para desplegar, pero no ha sido desplegada ni probada contra una cuenta
-real de AWS. El entorno donde se escribio esto no tiene AWS CLI ni
-credenciales configuradas. Antes de confiar en esto para la demo, seguir los
-pasos de abajo con tu propia cuenta.
+**Actualizacion (2026-07-26): desplegado y probado contra una cuenta AWS real.**
+Endpoint en vivo: `https://ble6qlnav0.execute-api.us-east-1.amazonaws.com/prod/audit`
+(stack `specguard-audit`, us-east-1). Probado con una auditoria real de punta
+a punta: `POST` devuelve 200 con el reporte completo, y el reporte queda
+persistido en DynamoDB con su TTL de 7 dias. Este endpoint es un bonus para
+el video/pitch - el link de demo que se entrega sigue siendo GitHub Pages.
+
+Dos bugs reales encontrados solo al desplegar de verdad (documentados aqui
+porque no habrian aparecido sin intentarlo):
+
+1. `ThrottleSettings` no es una propiedad valida de `AWS::Serverless::Api` -
+   `sam build` lo rechaza. Va bajo `MethodSettings` (`ResourcePath: "/*"`,
+   `HttpMethod: "*"`, `ThrottlingRateLimit`, `ThrottlingBurstLimit`).
+2. El endpoint edge-optimizado por defecto (`EndpointConfiguration` sin
+   especificar) devolvia `403 Forbidden` a traves de CloudFront en esta
+   cuenta - sin resource policy, sin WAF, con el metodo y el permiso de
+   Lambda correctamente configurados. Cambiar a `EndpointConfiguration: {Type: REGIONAL}`
+   (bypassa CloudFront, pega directo a API Gateway regional) lo resolvio.
+   Si tu API vuelve a dar Forbidden con todo lo demas bien, este es el
+   primer sospechoso.
 
 ## Que despliega
 
