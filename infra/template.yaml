@@ -32,9 +32,13 @@ Resources:
     Type: AWS::Serverless::Api
     Properties:
       StageName: prod
-      ThrottleSettings:
-        RateLimit: 5
-        BurstLimit: 10
+      EndpointConfiguration:
+        Type: REGIONAL
+      MethodSettings:
+        - ResourcePath: "/*"
+          HttpMethod: "*"
+          ThrottlingRateLimit: 5
+          ThrottlingBurstLimit: 10
 
   AuditFunction:
     Type: AWS::Serverless::Function
