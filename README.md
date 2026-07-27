@@ -1,5 +1,8 @@
 # SpecGuard
 
+[![SpecGuard](https://github.com/EstebanHerna/specguard/actions/workflows/specguard.yml/badge.svg)](https://github.com/EstebanHerna/specguard/actions/workflows/specguard.yml)
+[![Traceability](https://estebanherna.github.io/specguard/badge.svg)](https://estebanherna.github.io/specguard/)
+
 Audita si tu codigo realmente implementa tu spec de Kiro.
 
 Reto: **Productividad para desarrolladores** - Hackathon Kiro, Codigo Facilito + AWS.
@@ -51,6 +54,7 @@ specguard audit --spec .kiro/specs/specguard-core --diff HEAD~1 --fail-under 70
 ```
 
 Salidas: tabla en terminal, `reports/report.json` y `reports/report.md`.
+Con `--badge`, tambien `reports/badge.svg` (verde >=90%, amarillo >=70%, rojo <70%).
 
 ### Dashboard
 
