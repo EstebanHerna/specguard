@@ -71,6 +71,9 @@ This plan preserves the existing SpecGuard implementation sequence while hardeni
 - [x] 13. Integration test: SpecGuard auditing its own repository
   - _Requirements: 3.6, 5.1_
 
+- [x] 14. Add rate limiting to the remote audit Lambda endpoint
+  - _Requirements: 7.3_
+
 ## Task Dependency Graph
 
 ```json
